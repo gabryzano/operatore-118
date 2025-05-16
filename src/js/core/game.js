@@ -420,7 +420,7 @@ class EmergencyDispatchGame {
 
     async loadChiamate() {
         try {
-            const response = await fetch('src/data/Chiamate.json');
+            const response = await fetch('src/data/chiamate.json');
             this.chiamateTemplate = await response.json();
         } catch (e) {
             console.error("Error loading chiamate:", e);
@@ -726,8 +726,32 @@ class EmergencyDispatchGame {
             const templateKeys = Object.keys(this.chiamateTemplate);
             const selectedKey = templateKeys[Math.floor(Math.random() * templateKeys.length)];
             chiamataTemplate = this.chiamateTemplate[selectedKey];
-            testo_chiamata = chiamataTemplate.testo_chiamata.replace('(indirizzo abitazione)', indirizzo.indirizzo)
-                                                          .replace('(indirizzo esercizio pubblico)', indirizzo.indirizzo);
+            testo_chiamata = chiamataTemplate.testo_chiamata || '';
+            // Sostituzione dinamica segnaposto indirizzo
+            if (testo_chiamata) {
+                // Categorizza indirizzi
+                const categorie = (window.categorizzaIndirizzi ? window.categorizzaIndirizzi() : {});
+                // Mappa segnaposto -> categoria
+                const segnapostoToCategoria = {
+                    '(indirizzo abitazione)': 'abitazione',
+                    '(indirizzo esercizio pubblico)': 'luogo_pubblico',
+                    '(indirizzo scuola)': 'scuola',
+                    '(indirizzo RSA)': 'rsa',
+                    '(indirizzo strada)': 'strada',
+                    '(indirizzo azienda)': 'azienda'
+                };
+                // Trova tutti i segnaposto nel testo
+                Object.entries(segnapostoToCategoria).forEach(([segnaposto, categoria]) => {
+                    if (testo_chiamata.includes(segnaposto) && categorie[categoria] && categorie[categoria].length > 0) {
+                        // Scegli un indirizzo random della categoria
+                        const arr = categorie[categoria];
+                        const randIdx = Math.floor(Math.random() * arr.length);
+                        testo_chiamata = testo_chiamata.replaceAll(segnaposto, arr[randIdx].indirizzo);
+                    }
+                });
+                // Fallback: se rimangono segnaposto non sostituiti, sostituisci con indirizzo generico
+                testo_chiamata = testo_chiamata.replace(/\(indirizzo [^)]+\)/g, indirizzo.indirizzo);
+            }
         }
 
         // Randomly select case type (stabile/poco_stabile/critico)
