@@ -721,85 +721,40 @@ class EmergencyDispatchGame {
                 clearInterval(intervalId);
                 if (typeof callback === 'function') callback();
             }
-        }, 1);
+        }, 1000);
     }
 
-    generateNewCall() {
-        const indirizzi = this.indirizziReali || [];
-        const idx = Math.floor(Math.random() * indirizzi.length);
-        const indirizzo = indirizzi[idx] || { indirizzo: 'Indirizzo sconosciuto', lat: 45.68, lon: 9.67 };
-
-        // Randomly select a chiamata template and case type
-        let chiamataTemplate = null;
-        let testo_chiamata = '';
-        if (this.chiamateTemplate) {
-            const templateKeys = Object.keys(this.chiamateTemplate);
-            const selectedKey = templateKeys[Math.floor(Math.random() * templateKeys.length)];
-            chiamataTemplate = this.chiamateTemplate[selectedKey];
-            testo_chiamata = chiamataTemplate.testo_chiamata || '';
-            // Sostituzione dinamica segnaposto indirizzo
-            if (testo_chiamata) {
-                // Categorizza indirizzi
-                const categorie = (window.categorizzaIndirizzi ? window.categorizzaIndirizzi() : {});
-                // Mappa segnaposto -> categoria
-                const segnapostoToCategoria = {
-                    '(indirizzo abitazione)': 'abitazione',
-                    '(indirizzo esercizio pubblico)': 'luogo_pubblico',
-                    '(indirizzo scuola)': 'scuola',
-                    '(indirizzo RSA)': 'rsa',
-                    '(indirizzo strada)': 'strada',
-                    '(indirizzo azienda)': 'azienda'
-                };
-                // Trova tutti i segnaposto nel testo
-                Object.entries(segnapostoToCategoria).forEach(([segnaposto, categoria]) => {
-                    if (testo_chiamata.includes(segnaposto) && categorie[categoria] && categorie[categoria].length > 0) {
-                        // Scegli un indirizzo random della categoria
-                        const arr = categorie[categoria];
-                        const randIdx = Math.floor(Math.random() * arr.length);
-                        testo_chiamata = testo_chiamata.replaceAll(segnaposto, arr[randIdx].indirizzo);
-                    }
-                });
-                // Fallback: se rimangono segnaposto non sostituiti, sostituisci con indirizzo generico
-                testo_chiamata = testo_chiamata.replace(/\(indirizzo [^)]+\)/g, indirizzo.indirizzo);
+    async creaChiamataSimulata(id, missioneId, testo_chiamata, patologia, codice, indirizzo, chiamataTemplate, selectedCase) {
+        // Sostituisci i segnaposto nel testo della chiamata
+        if (testo_chiamata && chiamataTemplate && chiamataTemplate[selectedCase]) {
+            let testoTemplate = chiamataTemplate[selectedCase];
+            // Sostituzione segnaposto indirizzo
+            testo_chiamata = testoTemplate.testo || testo_chiamata;
+            indirizzo = testoTemplate.indirizzo || indirizzo;
+            // Altri segnaposto possono essere gestiti qui se necessario
+        }
+        // Dopo la sostituzione dei segnaposto, aggiorna indirizzo/lat/lon se nel testo è stato inserito un indirizzo reale
+        let indirizzoEffettivo = indirizzo;
+        // Cerca il primo indirizzo reale presente nel testo della chiamata
+        if (window.indirizziReali && Array.isArray(window.indirizziReali)) {
+            for (const i of window.indirizziReali) {
+                if (testo_chiamata && testo_chiamata.includes(i.indirizzo)) {
+                    indirizzoEffettivo = i;
+                    break;
+                }
             }
         }
-
-        // Randomly select case type (stabile/poco_stabile/critico)
-        const caseTypes = ['caso_stabile', 'caso_poco_stabile', 'caso_critico'];
-        const weights = [0.5, 0.3, 0.2]; // 50% stable, 30% less stable, 20% critical
-        let selectedCase = null;
-
-        const rand = Math.random();
-        let sum = 0;
-        for (let i = 0; i < weights.length; i++) {
-            sum += weights[i];
-            if (rand < sum) {
-                selectedCase = caseTypes[i];
-                break;
-            }
+        // Rimuovi la scritta "Simulazione chiamata 118:" dal testo chiamata
+        if (testo_chiamata) {
+            testo_chiamata = testo_chiamata.replace(/^Simulazione chiamata 118:\s*/i, '');
         }
-
-        const patologie = ['Trauma', 'Malore', 'Incidente', 'Dolore toracico', 'Dispnea', 'Altro'];
-        const codici = ['Rosso', 'Giallo', 'Verde'];
-        const patologia = patologie[Math.floor(Math.random() * patologie.length)];
-        const codice = codici[Math.floor(Math.random() * codici.length)];
-
-        const now = new Date();
-        const year = now.getFullYear();
-        const decina = Math.floor(year % 100 / 10);
-        const unita = year % 10;
-        if (!window._missioneProgressivo) window._missioneProgressivo = 0;
-        window._missioneProgressivo++;
-        const progressivo = window._missioneProgressivo.toString().padStart(6, '0');
-        const missioneId = `${decina}${unita}1${progressivo}`;
-        const id = 'C' + Date.now() + Math.floor(Math.random()*1000);
         const call = {
             id,
             missioneId,
-            location: indirizzo.indirizzo,
-            indirizzo: indirizzo.indirizzo,
-            lat: indirizzo.lat,
-            lon: indirizzo.lon,
+            location: indirizzoEffettivo.indirizzo,
+            indirizzo: indirizzoEffettivo.indirizzo,
+            lat: indirizzoEffettivo.lat,
+            lon: indirizzoEffettivo.lon,
             simText: testo_chiamata || `Paziente con ${patologia}`,
             patologia,
             codice,
@@ -807,379 +762,52 @@ class EmergencyDispatchGame {
             selectedChiamata: chiamataTemplate,
             selectedCase: selectedCase
         };
-        this.calls.set(id, call);
-        this.ui.showNewCall(call);
-        if (this.map) {
-            const marker = L.marker([call.lat, call.lon], {
-                icon: L.icon({
-                    iconUrl: 'src/assets/marker-rosso.png',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 28],
-                    popupAnchor: [0, -28]
-                })
-            }).addTo(this.map).bindPopup(`<b>Chiamata</b><br>${call.indirizzo || call.location || 'Indirizzo sconosciuto'}`);
-            call._marker = marker;
-        }
-    }
 
-    openMissionPopup(call) {
-        const popup = document.getElementById('popupMissione');
-        if (!popup) return;
-        // Centra il popup ogni volta che si apre
-        popup.style.left = '50%';
-        popup.style.top = '50%';
-        popup.style.transform = 'translate(-50%, -50%)';
-        popup.classList.remove('hidden');
-        // Salva l'id della chiamata come attributo sul popup per referenza sicura
-        popup.setAttribute('data-call-id', call.id);
-        const mezzi = (this.mezzi || []).map(m => {
-            let dist = 0;
-            if (call.lat && call.lon && m.lat && m.lon) {
-                dist = distanzaKm(call.lat, call.lon, m.lat, m.lon);
+        // Logica per assegnare mezzi alla chiamata basata su regole personalizzate
+        const mezziDisponibili = (window.game.mezzi || []).filter(m => m.stato === 1); // Solo mezzi disponibili
+        const mezziAssegnati = [];
+
+        // Esempio di logica di assegnazione: assegna il primo mezzo disponibile che soddisfa i criteri
+        for (const mezzo of mezziDisponibili) {
+            if (mezzo.tipo_mezzo === 'MSB' && mezziAssegnati.length < 1) {
+                mezziAssegnati.push(mezzo.nome_radio);
+            } else if (mezzo.tipo_mezzo === 'MSA1' && mezziAssegnati.length < 2) {
+                mezziAssegnati.push(mezzo.nome_radio);
+            } else if (mezzo.tipo_mezzo === 'MSA2' && mezziAssegnati.length < 3) {
+                mezziAssegnati.push(mezzo.nome_radio);
             }
-            return { ...m, _dist: dist };
-        }).sort((a, b) => a._dist - b._dist);
-        const indirizzoSpan = document.getElementById('missione-indirizzo');
-        if (indirizzoSpan) indirizzoSpan.textContent = call.location || call.indirizzo || '';
-        const indirizzoInput = document.getElementById('indirizzo');
-        if (indirizzoInput) {
-            indirizzoInput.value = call.location || '';
-            indirizzoInput.readOnly = true;
-        }
-        const luogoSelect = document.getElementById('luogo');
-        if (luogoSelect) {
-            luogoSelect.innerHTML = '';
-            const opzioniLuogo = ['Casa', 'Strada', 'Esercizi pubblici', 'Impianto lavorativo', 'Impianto sportivo', 'Scuola', 'Altro'];
-            opzioniLuogo.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                option.textContent = opt;
-                if (call.luogo === opt) option.selected = true;
-                luogoSelect.appendChild(option);
-            });
-        }
-        const patologiaSelect = document.getElementById('patologia');
-        if (patologiaSelect) {
-            patologiaSelect.innerHTML = '';
-            const opzioniPatologia = [
-                'Traumatica','Cardiocircolatoria','Respiratoria','Neurologica','Psichiatrica','Tossicologica','Metabolica','Gastroenterologica','Urologica','Oculistica','Otorinolaringoiatrica','Dermatologica','Ostetrico-ginecologica','Infettiva','Neoplastica','Altra patologia','Non identificata'
-            ];
-            opzioniPatologia.forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                option.textContent = opt;
-                if (call.patologia === opt) option.selected = true;
-                patologiaSelect.appendChild(option);
-            });
-        }
-        const codiceSelect = document.getElementById('codice');
-        if (codiceSelect) {
-            codiceSelect.innerHTML = '';
-            ['Rosso','Giallo','Verde'].forEach(opt => {
-                const option = document.createElement('option');
-                option.value = opt;
-                option.textContent = opt;
-                if (call.codice === opt) option.selected = true;
-                codiceSelect.appendChild(option);
-            });
-        }
-        const note1 = document.getElementById('note1');
-        if (note1) note1.value = call.note1 || '';
-        const note2 = document.getElementById('note2');
-        if (note2) note2.value = call.note2 || '';
-
-        const btnsRapidi = [
-            {tipo:'MSB', label:'MSB'},
-            {tipo:'MSA1', label:'MSA1'},
-            {tipo:'MSA2', label:'MSA2'},
-            {tipo:'ELI', label:'ELI'}
-        ];
-        const btnsRapidiDiv = document.getElementById('btnsRapidiMezzi');
-        if (btnsRapidiDiv) {
-            btnsRapidiDiv.innerHTML = btnsRapidi.map(b =>
-                `<button type='button' class='btn-rapido-mezzo' data-tipo='${b.tipo}' style='font-size:15px;padding:2px 10px 2px 10px;border-radius:4px;background:#1976d2;color:#fff;border:none;line-height:1.2;min-width:44px;'>${b.label}</button>`
-            ).join('');
+            // Esci dal ciclo se abbiamo già assegnato abbastanza mezzi
+            if (mezziAssegnati.length === 3) break;
         }
 
-        // Mostra solo mezzi in stato 1, 2, 6, 7
-        const mezziFiltrati = mezzi.filter(m => [1,2,6,7].includes(m.stato));
-        let html = `<table class='stato-mezzi-table' style='width:100%;margin-bottom:0;'>
-            <thead><tr>
-                <th style='width:38%;text-align:left;'>Nome</th>
-                <th style='width:22%;text-align:left;'>Tipo</th>
-                <th style='width:24%;text-align:left;'>Convenzione</th>
-                <th style='width:16%;text-align:left;'>Distanza</th>
-            </tr></thead>
-            <tbody>`;
-        mezziFiltrati.forEach(m => {
-            const checked = (call.mezziAssegnati||[]).includes(m.nome_radio) ? 'checked' : '';
-            const disabled = (m.stato !== 1 && !checked) ? 'disabled' : '';
-            let distanza = '';
-            if(call && call.lat && call.lon && m.lat && m.lon) {
-                distanza = distanzaKm(call.lat, call.lon, m.lat, m.lon).toFixed(1) + ' km';
+        call.mezziAssegnati = mezziAssegnati;
+
+        // Aggiungi la chiamata alla lista delle chiamate attive
+        window.game.calls.set(call.id, call);
+
+        // Aggiorna l'interfaccia utente se necessario
+        if (window.game.ui && typeof window.game.ui.updateMissioneInCorso === 'function') {
+            window.game.ui.updateMissioneInCorso(call);
+        }
+
+        return call;
+    }
+}
+
+window.addEventListener('load', async () => {
+    // Avvia la simulazione solo se non è già in corso
+    if (!window.simRunning) {
+        window.simRunning = true;
+        const game = new EmergencyDispatchGame();
+        window.game = game;
+        await game.initialize();
+        // Avvia il loop di simulazione
+        setInterval(() => {
+            if (window.simRunning) {
+                window.simTime += 1;
+                game.updateMezzoMarkers();
+                game.updatePostazioneMarkers();
             }
-            // Evidenzia in giallo i mezzi in stato 2
-            const evidenzia = m.stato === 2 ? "background:#fff9c4;" : "";
-            html += `<tr style='${evidenzia}'>`+
-                `<td style='white-space:nowrap;padding:2px 4px;text-align:left;'><label style='display:flex;align-items:center;gap:4px;'><input type='checkbox' name='mezzi' value='${m.nome_radio}' ${checked} ${disabled} style='margin:0 2px 0 0;vertical-align:middle;'><span style='vertical-align:middle;'>${m.nome_radio}</span></label></td>`+
-                `<td style='padding:2px 4px;text-align:left;'>${m.tipo_mezzo || ''}</td>`+
-                `<td style='padding:2px 4px;text-align:left;'>${m.convenzione || ''}</td>`+
-                `<td style='padding:2px 4px;text-align:left;'>${distanza}</td>`+
-            `</tr>`;
-        });
-        html += `</tbody></table>`;
-        const mezziAssegnatiDiv = document.getElementById('mezziAssegnatiScroll');
-        if (mezziAssegnatiDiv) mezziAssegnatiDiv.innerHTML = html;
-        attachBtnListeners();
-
-        function attachBtnListeners() {
-            document.querySelectorAll('.btn-rapido-mezzo').forEach(btn => {
-                btn.onclick = function() {
-                    const tipo = btn.getAttribute('data-tipo');
-                    // Seleziona solo il primo mezzo non ancora selezionato di quel tipo
-                    const checkboxes = Array.from(document.querySelectorAll('#mezziAssegnatiScroll input[type=checkbox]'));
-                    const mezziTipo = mezziFiltrati.filter(m => m.tipo_mezzo && m.tipo_mezzo.startsWith(tipo));
-                    for (const m of mezziTipo) {
-                        const cb = checkboxes.find(c => c.value === m.nome_radio);
-                        if (cb && !cb.checked && !cb.disabled) {
-                            cb.checked = true;
-                            break;
-                        }
-                    }
-                };
-            });
-        }
+        }, 1000);
     }
-
-    chiudiPopup() {
-        const popup = document.getElementById('popupMissione');
-        if (popup) popup.classList.add('hidden');
-    }
-
-    confirmCall() {
-        const popup = document.getElementById('popupMissione');
-        // Recupera l'id della chiamata dal popup
-        const callId = popup?.getAttribute('data-call-id');
-        const call = callId ? this.calls.get(callId) : null;
-        if (!call) return;
-        const luogo = document.getElementById('luogo')?.value || '';
-        const patologia = document.getElementById('patologia')?.value || '';
-        const codice = document.getElementById('codice')?.value || '';
-        const note1 = document.getElementById('note1')?.value || '';
-        const note2 = document.getElementById('note2')?.value || '';
-        call.luogo = luogo;
-        call.patologia = patologia;
-        call.codice = codice;
-        call.note1 = note1;
-        call.note2 = note2;
-        // Query robusta per i mezzi selezionati
-        const mezziChecked = Array.from(document.querySelectorAll('#popupMissione input[type=checkbox][name=mezzi]:checked')).map(cb => cb.value);
-        call.mezziAssegnati = mezziChecked;
-        if (window.game && window.game.mezzi) {
-            window.game.mezzi.forEach(m => {
-                if (mezziChecked.includes(m.nome_radio)) {
-                    m.chiamata = call;
-                    if (m.stato === 1) setStatoMezzo(m, 2);
-                }
-            });
-        }        this.ui.moveCallToEventiInCorso(call);
-        popup?.classList.add('hidden');
-        const callDiv = document.getElementById(`call-${call.id}`);
-        if (callDiv) callDiv.remove();
-        if (call._marker) call._marker.setIcon(L.icon({
-            iconUrl: 'src/assets/marker-rosso.png',
-            iconSize: [28, 28],
-            iconAnchor: [14, 28],
-            popupAnchor: [0, -28]
-        }));
-    }
-
-    gestisciStato7(mezzo) {
-        const postazione = Object.values(this.postazioniMap).find(p => p.nome === mezzo.postazione);
-        if (!postazione) return;
-        if (Math.abs(mezzo.lat - postazione.lat) < 0.0001 && Math.abs(mezzo.lon - postazione.lon) < 0.0001) {
-            setStatoMezzo(mezzo, 1);
-            return;
-        }
-        const dist = distanzaKm(mezzo.lat, mezzo.lon, postazione.lat, postazione.lon);
-        getVelocitaMezzo(mezzo.tipo_mezzo).then(vel => {
-            const tempoRientro = Math.round((dist / vel) * 60);
-            this.moveMezzoGradualmente(
-                mezzo,
-                mezzo.lat, mezzo.lon,
-                postazione.lat, postazione.lon,
-                Math.max(tempoRientro, 2),
-                1,
-                () => {
-                    mezzo.comunicazioni = (mezzo.comunicazioni || []).concat([`Rientrato in postazione`]);
-                    this.ui.updateStatoMezzi(mezzo);
-                    this.updateMezzoMarkers();
-                    this.updatePostazioneMarkers();
-                }
-            );
-        });
-    }
-}
-
-// Esportazione della classe EmergencyDispatchGame
-if (typeof window !== 'undefined') {
-    // Non ridefinire la classe se già presente
-    if (!window.hasOwnProperty('EmergencyDispatchGame')) {
-        window.EmergencyDispatchGame = EmergencyDispatchGame;
-        console.log("EmergencyDispatchGame class initialized and exposed to global scope");
-    }
-}
-
-// Aggiorna la lista dei mezzi e i loro stati in tempo reale
-GameUI.prototype.updateStatoMezzi = function(mezzoCambiato = null) {
-    const div = document.getElementById('statoMezzi');
-    if (!div || !window.game || !window.game.mezzi) return;
-
-    // Ordina: prima i mezzi che hanno cambiato stato o ricevuto comunicazioni più di recente (escluso stato 8), poi tutti gli altri, poi quelli in stato 8 in fondo
-    let mezzi = [...window.game.mezzi];
-
-    // Mezzi in stato 8 separati
-    const mezziStato8 = mezzi.filter(m => m.stato === 8);
-    let altriMezzi = mezzi.filter(m => m.stato !== 8);
-
-    // Calcola il timestamp più recente tra _lastEvent e ultimo messaggio
-    altriMezzi.forEach(m => {
-        let lastMsg = 0;
-        if (Array.isArray(m.comunicazioni) && m.comunicazioni.length > 0) {
-            // Consider only Report pronto messages for timestamp
-            const reportMsg = m.comunicazioni.find(c => c.includes('Report pronto'));
-            if (reportMsg) {
-                lastMsg = m._lastMsgTime || 0;
-            }
-        }
-        m._sortKey = Math.max(m._lastEvent || 0, lastMsg);
-    });
-    altriMezzi = altriMezzi.sort((a, b) => (b._sortKey || 0) - (a._sortKey || 0));
-    mezziStato8.sort((a, b) => (a.nome_radio || '').localeCompare(b.nome_radio || ''));
-
-    // Layout a 3 colonne
-    div.innerHTML = '';
-    div.style.maxHeight = '350px';
-    div.style.overflowY = 'auto';
-    div.style.display = 'flex';
-    div.style.flexDirection = 'column';
-
-    // HEADER: aggiungi la riga di intestazione
-    div.innerHTML += `
-        <div class="mezzo-header-row" style="display:flex;align-items:center;font-weight:bold;background:#e3e3e3;border-bottom:1px solid #bbb;padding:2px 0 2px 0;">
-            <div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">Mezzo</div>
-            <div style="flex:1;text-align:left;min-width:70px;">Stato</div>
-            <div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">Comunicazioni</div>
-        </div>
-    `;
-
-    // Funzione robusta per etichetta stato
-    function getStatoLabel(stato) {
-        if (window.game && window.game.statiMezzi && window.game.statiMezzi[stato] && window.game.statiMezzi[stato].Descrizione) {
-            return window.game.statiMezzi[stato].Descrizione;
-        }
-        return '';
-    }
-
-    altriMezzi.forEach(m => {
-        const stato = m.stato;
-        const statoLabel = getStatoLabel(stato);
-        // Only show Report pronto message if present
-        const comunicazione = Array.isArray(m.comunicazioni) ? 
-            (m.comunicazioni.find(c => c.includes('Report pronto')) || '') : '';
-        // Evidenzia se il mezzo ha un nuovo messaggio non letto e il messaggio è Report pronto
-        const lampeggia = (m._msgLampeggia && comunicazione.includes('Report pronto')) ? 
-            'animation: mezzo-lamp 1s linear infinite alternate;' : '';
-        
-        div.innerHTML += `
-            <div class="mezzo-row" style="display:flex;align-items:center;margin-bottom:4px;cursor:pointer;${lampeggia}" data-mezzo-id="${m.nome_radio}">
-                <div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">
-                    <b>${m.nome_radio}</b> <span style='color:#888;'>${m.tipo_mezzo || ''}</span> <span style='color:#1976d2;'>${m.convenzione || ''}</span>
-                </div>
-                <div style="flex:1;text-align:left;min-width:70px;">
-                    <span style='font-weight:bold;'>${stato}</span> <span style='color:${stato === 8 ? '#d32f2f' : '#388e3c'};'>${statoLabel}</span>
-                </div>
-                <div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#555;">${comunicazione}</div>
-            </div>
-        `;
-    });
-
-    if (mezziStato8.length > 0) {
-        div.innerHTML += `<div style="margin:8px 0 4px 0;border-top:1px solid #ccc;"></div>`;
-        mezziStato8.forEach(m => {
-            const stato = m.stato;
-            const statoLabel = getStatoLabel(stato);
-            // Only show Report pronto message if present
-            const comunicazione = Array.isArray(m.comunicazioni) ? 
-                (m.comunicazioni.find(c => c.includes('Report pronto')) || '') : '';
-                
-            div.innerHTML += `
-                <div class="mezzo-row" style="display:flex;align-items:center;margin-bottom:4px;background:#fbe9e7;cursor:pointer;" data-mezzo-id="${m.nome_radio}">
-                    <div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">
-                        <b>${m.nome_radio}</b> <span style='color:#888;'>${m.tipo_mezzo || ''}</span> <span style='color:#1976d2;'>${m.convenzione || ''}</span>
-                    </div>
-                    <div style="flex:1;text-align:left;min-width:70px;">
-                        <span style='font-weight:bold;'>${stato}</span> <span style='color:#d32f2f;'>${statoLabel}</span>
-                    </div>
-                    <div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#555;">${comunicazione}</div>
-                </div>
-            `;
-        });
-    }
-
-    // Gestione click per togliere lampeggio
-    setTimeout(() => {
-        document.querySelectorAll('.mezzo-row').forEach(row => {
-            row.onclick = function() {
-                const id = row.getAttribute('data-mezzo-id');
-                const mezzo = window.game.mezzi.find(m => m.nome_radio === id);
-                if (mezzo && mezzo._msgLampeggia) {
-                    mezzo._msgLampeggia = false;
-                }
-            };
-        });
-    }, 10);
-}
-
-// Animazione lampeggio giallo
-if (!document.getElementById('mezzo-lamp-style')) {
-    const style = document.createElement('style');
-    style.id = 'mezzo-lamp-style';
-    style.innerHTML = `@keyframes mezzo-lamp { 0% { background: #fffde7; } 100% { background: #ffe082; } }`;
-    document.head.appendChild(style);
-}
-
-function distanzaKm(lat1, lon1, lat2, lon2) {
-    const R = 6371;
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
-    const a = 
-        Math.sin(dLat/2) * Math.sin(dLat/2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-        Math.sin(dLon/2) * Math.sin(dLon/2); 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-    return R * c;
-}
-
-function getVelocitaMezzo(tipoMezzo) {
-    return new Promise(resolve => {
-        const speeds = {
-            'MSB': 70,
-            'MSA1': 80,
-            'MSA2': 80,
-            'MSA1_A': 80,
-            'MSA2_A': 80,
-            'ELI': 150,
-            'default': 60
-
-        };        resolve(speeds[tipoMezzo] || speeds.default);
-    });
-}
-
-// CSS per evidenziare i pulsanti selezionati
-if (!document.getElementById('mezzo-btn-selected-style')) {
-    const style = document.createElement('style');
-    style.id = 'mezzo-btn-selected-style';
-    style.innerHTML = `.mezzo-btn-selected { background: #ffd600 !important; color: #222 !important; border: 2px solid #d32f2f !important; }`;
-    document.head.appendChild(style);
-}
+});
