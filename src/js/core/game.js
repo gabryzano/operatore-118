@@ -1,3 +1,13 @@
+// DEBUG: Verifica presenza variabili globali fondamentali
+if (!window.indirizziReali || !window.categorizzaIndirizzi) {
+    console.error('[EMERGENZA SIM] Errore: indirizziReali o categorizzaIndirizzi NON disponibili!\nControlla che src/data/indirizzi.js sia caricato PRIMA di game.js.');
+    // Mostra anche un messaggio visibile a schermo per debug online
+    const warn = document.createElement('div');
+    warn.style = 'background:#fdd;color:#900;padding:12px;font-weight:bold;position:fixed;top:0;left:0;z-index:9999;width:100vw;text-align:center;';
+    warn.textContent = 'ERRORE: indirizziReali o categorizzaIndirizzi NON disponibili! Controlla la console.';
+    document.body.appendChild(warn);
+}
+
 // Funzione per ottenere la velocità attuale
 function getSimSpeed() {
     return window.simSpeed || 1;
