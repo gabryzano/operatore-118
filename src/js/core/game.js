@@ -1153,3 +1153,23 @@ GameUI.prototype.updateStatoMezzi = function(mezzoCambiato = null) {
         }
     });
 };
+
+// Restituisce la velocità media (in km/h) di un mezzo dato il tipo
+async function getVelocitaMezzo(tipoMezzo) {
+    // Carica la tabella solo una volta
+    if (!window._tabellaMezzi118) {
+        const response = await fetch('src/data/tabella_mezzi_118.json');
+        const data = await response.json();
+        window._tabellaMezzi118 = (data.Sheet1 || data.sheet1 || []);
+    }
+    const tab = window._tabellaMezzi118;
+    // Cerca la voce corrispondente
+    const entry = tab.find(e => (e.Tipo || '').toUpperCase() === (tipoMezzo || '').toUpperCase());
+    if (entry && entry["Velocità media"]) {
+        // Estrae il numero dalla stringa (es: "80 km/h")
+        const match = entry["Velocità media"].toString().match(/\d+/);
+        if (match) return Number(match[0]);
+    }
+    // Default: 60 km/h
+    return 60;
+}
