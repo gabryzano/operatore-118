@@ -433,7 +433,12 @@ class EmergencyDispatchGame {
 
     async loadChiamate() {
         try {
-            const response = await fetch('src/data/chiamate.json'); // PATCH: path case-sensitive per GitHub Pages
+            // Prova prima con il path minuscolo (compatibile GitHub Pages)
+            let response = await fetch('src/data/chiamate.json');
+            if (!response.ok) {
+                // Se fallisce, prova con la variante maiuscola (compatibilità locale)
+                response = await fetch('src/data/Chiamate.json');
+            }
             this.chiamateTemplate = await response.json();
         } catch (e) {
             console.error("Error loading chiamate:", e);
