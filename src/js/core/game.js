@@ -1,5 +1,5 @@
 // Calcola la distanza tra due coordinate geografiche in km
-function distanzaKm(lat1, lon1, lat2, lon2) {
+window.distanzaKm = function(lat1, lon1, lat2, lon2) {
     const R = 6371; // Raggio della Terra in km
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
