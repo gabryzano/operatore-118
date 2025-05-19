@@ -34,14 +34,41 @@ function formatSimTime(sec) {
 
 function updateSimClock() {
     const el = document.getElementById('sim-clock');
-    if(el) el.textContent = formatSimTime(window.simTime);
+    if(el) {
+        let t = window.simDay + ' ';
+        let sec = window.simTime||0;
+        // --- FIX: mostra sempre orario 00:00:00 dopo le 23:59:59 ---
+        if (sec >= 24*3600) sec = 0;
+        const h = Math.floor(sec/3600).toString().padStart(2,'0');
+        const m = Math.floor((sec%3600)/60).toString().padStart(2,'0');
+        const s = (sec%60).toString().padStart(2,'0');
+        t += h+":"+m+":"+s;
+        el.textContent = t;
+    }
     const btn = document.getElementById('sim-startstop');
     if(btn) btn.textContent = window.simRunning ? '⏸️' : '▶️';
 }
 
 function simTick() {
     if(window.simRunning) {
-        window.simTime += getSimSpeed(); // Avanza di X secondi simulati ogni secondo reale
+        const giorniSettimanaIT = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
+        let sec = window.simTime || 0;
+        let dayIdx = typeof window.simDay !== 'undefined' ? giorniSettimanaIT.indexOf(window.simDay) : new Date().getDay();
+        if(dayIdx === -1) dayIdx = new Date().getDay();
+        
+        // Incrementa il tempo simulato
+        const nextSec = sec + getSimSpeed();
+        
+        // Gestisci il rollover giorno e orario
+        if (nextSec >= 24*3600) {
+            sec = 0; // Reset a mezzanotte
+            dayIdx = (dayIdx + 1) % 7;
+            window.simDay = giorniSettimanaIT[dayIdx];
+        } else {
+            sec = nextSec;
+        }
+        
+        window.simTime = sec;
         updateSimClock();
     }
 }
@@ -310,6 +337,10 @@ function aggiornaDisponibilitaMezzi() {
         if (window.game.updatePostazioneMarkers) {
             window.game.updatePostazioneMarkers();
         }
+        // Aggiorna anche la tabella Stato Mezzi
+        if (window.game.ui && typeof window.game.ui.updateStatoMezzi === 'function') {
+            window.game.ui.updateStatoMezzi();
+        }
 
         window._lastAvailabilityCheck.ora = ora;
         window._lastAvailabilityCheck.giorno = giorno;
@@ -453,9 +484,35 @@ class EmergencyDispatchGame {
             await this.loadMezzi();
             this.initializeMap();
             await this.loadHospitals();
+            // Start automatic call generation
+            if (window.simTimeInit) {
+                this.scheduleNextCall();
+            }
         } catch (e) {
             console.error("Error during initialization:", e);
         }
+    }
+
+    // Schedule automatic new calls at random intervals based on simulated time
+    scheduleNextCall() {
+        // Determine current simulated hour
+        const sec = window.simTime || 0;
+        const hour = Math.floor(sec / 3600);
+        // Daytime 7-19: shorter intervals, night: longer intervals
+        let minInterval = 45; // seconds
+        let maxInterval = 300; // seconds
+        if (hour >= 7 && hour < 19) {
+            minInterval = 45;
+            maxInterval = 180;
+        } else {
+            minInterval = 180;
+            maxInterval = 300;
+        }
+        const interval = Math.floor(Math.random() * (maxInterval - minInterval + 1)) + minInterval;
+        simTimeout(() => {
+            this.generateNewCall();
+            this.scheduleNextCall();
+        }, interval);
     }
 
     initializeMap() {
@@ -693,53 +750,82 @@ class EmergencyDispatchGame {
                 m._marker = null;
             }
         });
-        this.mezzi.forEach(m => {            if (![2, 4, 7].includes(m.stato)) return;            let emoji = "❓";
-            if (["MSB", "MSA1_A", "MSA2_A"].includes(m.tipo_mezzo)) emoji = "🚑";
-            else if (["MSA1", "MSA2"].includes(m.tipo_mezzo)) emoji = "🚗";
-            else if (m.tipo_mezzo === "ELI") emoji = "🚁";
-            const icon = L.divIcon({
-                className: 'mezzo-marker',
-                html: `<div style="font-size:22px;">${emoji}</div>`,
-                iconSize: [28, 28],
-                iconAnchor: [14, 28],
-                popupAnchor: [0, -28]
+        this.mezzi.forEach(m => {            if (![2, 4, 7].includes(m.stato)) return;            // Usa immagini PNG invece delle emoji
+            let iconUrl;
+            if (["MSB", "MSA1_A", "MSA2_A"].includes(m.tipo_mezzo)) iconUrl = 'src/assets/MSB.png';
+            else if (["MSA1", "MSA2"].includes(m.tipo_mezzo)) iconUrl = 'src/assets/MSA.png';
+            else if (m.tipo_mezzo === "ELI") iconUrl = 'src/assets/ELI.png';
+            else iconUrl = 'src/assets/marker-rosso.png';
+            const icon = L.icon({
+                iconUrl,
+                iconSize: [36, 36],        // increased size
+                iconAnchor: [18, 36],      // center bottom
+                popupAnchor: [0, -36]
             });
             m._marker = L.marker([m.lat, m.lon], { icon }).addTo(this.map)
                 .bindPopup(`<b>${m.nome_radio}</b><br>${m.postazione}<br>Stato: ${m.stato}`);
         });
     }
 
-    moveMezzoGradualmente(mezzo, lat1, lon1, lat2, lon2, durataMinuti, statoFinale, callback) {
-        console.log('[DEBUG] moveMezzoGradualmente chiamata per', mezzo.nome_radio, 'da', lat1, lon1, 'a', lat2, lon2, 'durata:', durataMinuti, 'min, stato finale:', statoFinale);
+    async moveMezzoGradualmente(mezzo, lat1, lon1, lat2, lon2, durataMinuti, statoFinale, callback) {
+        // Se non è ELI, usa percorso stradale
+        let percorso = [[lat1, lon1], [lat2, lon2]];
+        if (mezzo.tipo_mezzo !== 'ELI') {
+            percorso = await getPercorsoStradaleOSRM(lat1, lon1, lat2, lon2);
+        }
+        // Calcola quanti step totali (1 step al secondo simulato)
         const stepTotali = durataMinuti * 60;
         let stepAttuale = 0;
-        const deltaLat = (lat2 - lat1) / stepTotali;
-        const deltaLon = (lon2 - lon1) / stepTotali;
+        // Suddividi il percorso in stepTotali punti
+        let puntiPercorso = [];
+        if (percorso.length <= 2) {
+            // fallback: linea retta
+            for (let i = 0; i <= stepTotali; i++) {
+                const frac = i / stepTotali;
+                puntiPercorso.push([
+                    lat1 + (lat2 - lat1) * frac,
+                    lon1 + (lon2 - lon1) * frac
+                ]);
+            }
+        } else {
+            // Interpola i punti del percorso OSRM per avere stepTotali punti
+            for (let i = 0; i < stepTotali; i++) {
+                const t = i / stepTotali * (percorso.length - 1);
+                const idx = Math.floor(t);
+                const frac = t - idx;
+                const p1 = percorso[idx];
+                const p2 = percorso[Math.min(idx + 1, percorso.length - 1)];
+                puntiPercorso.push([
+                    p1[0] + (p2[0] - p1[0]) * frac,
+                    p1[1] + (p2[1] - p1[1]) * frac
+                ]);
+            }
+            puntiPercorso.push([lat2, lon2]);
+        }
         const self = this;
         let canceled = false;
         function step() {
             if (!window.simRunning) {
-                // riprova quando in pausa
                 simTimeout(step, 1);
                 return;
             }
-            stepAttuale++;
-            mezzo.lat += deltaLat;
-            mezzo.lon += deltaLon;
-            if (self.updateMezzoMarkers) self.updateMezzoMarkers();
-            if (stepAttuale >= stepTotali) {
-                mezzo.lat = lat2;
-                mezzo.lon = lon2;
-                setStatoMezzo(mezzo, statoFinale);
+            if (stepAttuale < puntiPercorso.length) {
+                mezzo.lat = puntiPercorso[stepAttuale][0];
+                mezzo.lon = puntiPercorso[stepAttuale][1];
                 if (self.updateMezzoMarkers) self.updateMezzoMarkers();
-                if (typeof callback === 'function') callback();
-            } else if (!canceled) {
-                simTimeout(step, 1);
+                stepAttuale++;
+                if (stepAttuale < puntiPercorso.length) {
+                    simTimeout(step, 1);
+                } else {
+                    mezzo.lat = lat2;
+                    mezzo.lon = lon2;
+                    setStatoMezzo(mezzo, statoFinale);
+                    if (self.updateMezzoMarkers) self.updateMezzoMarkers();
+                    if (typeof callback === 'function') callback();
+                }
             }
         }
-        // avvia il movimento
         simTimeout(step, 1);
-        // permetti annullamento se necessario
         mezzo._cancelMove = () => { canceled = true; };
     }
 
@@ -756,7 +842,7 @@ class EmergencyDispatchGame {
         // Determina lista indirizzi in base al placeholder nel testo
         const rawText = testo_chiamata || '';
         const match = rawText.match(/\(indirizzo ([^)]+)\)/i);
-        let sourceList = this.indirizziReali || [];
+        let sourceList = window.indirizziReali || [];
         if (match) {
             const key = match[1].toLowerCase().trim().replace(/\s+/g, '_');
             if (this.categorieIndirizzi[key] && this.categorieIndirizzi[key].length) {
@@ -817,9 +903,9 @@ class EmergencyDispatchGame {
             const marker = L.marker([call.lat, call.lon], {
                 icon: L.icon({
                     iconUrl: 'src/assets/marker-rosso.png',
-                    iconSize: [28, 28],
-                    iconAnchor: [14, 28],
-                    popupAnchor: [0, -28]
+                    iconSize: [36, 36],    // increased size
+                    iconAnchor: [18, 36],  // center bottom
+                    popupAnchor: [0, -36]
                 })
             }).addTo(this.map).bindPopup(`<b>Chiamata</b><br>${call.indirizzo || call.location || 'Indirizzo sconosciuto'}`);
             call._marker = marker;
@@ -837,12 +923,44 @@ class EmergencyDispatchGame {
         // Salva l'id della chiamata come attributo sul popup per referenza sicura
         popup.setAttribute('data-call-id', call.id);
         const mezzi = (this.mezzi || []).map(m => {
-            let dist = 0;
-            if (call.lat && call.lon && m.lat && m.lon) {
-                dist = distanzaKm(call.lat, call.lon, m.lat, m.lon);
-            }
+            const dist = (call.lat && call.lon && m.lat && m.lon)
+                ? distanzaKm(m.lat, m.lon, call.lat, call.lon)
+                : Infinity;
             return { ...m, _dist: dist };
-        }).sort((a, b) => a._dist - b._dist);
+        }).sort((a, b) => (a._dist || 0) - (b._dist || 0));
+
+        // Funzione per aggiornare la tabella dei mezzi nel popup missione
+        this.updateMissionPopupTable = function(call) {
+            const mezziFiltrati = this.mezzi.filter(m => [1,2,6,7].includes(m.stato) || (call.mezziAssegnati||[]).includes(m.nome_radio));
+            let html = `<table class='stato-mezzi-table' style='width:100%;margin-bottom:0;'>
+                <thead><tr>
+                    <th style='width:38%;text-align:left;'>Nome</th>
+                    <th style='width:22%;text-align:left;'>Tipo</th>
+                    <th style='width:24%;text-align:left;'>Convenzione</th>
+                    <th style='width:16%;text-align:left;'>Distanza</th>
+                </tr></thead>
+                <tbody>`;
+            mezziFiltrati.forEach(m => {
+                const checked = (call.mezziAssegnati||[]).includes(m.nome_radio) ? 'checked' : '';
+                let distanza = m._dist !== undefined && isFinite(m._dist)
+                    ? `${m._dist.toFixed(1)} km`
+                    : `<span data-mezzo-dist="${m.nome_radio}">...</span>`;
+                let evidenzia = m.stato === 2 ? "background:#ffcdd2;" :
+                               m.stato === 6 ? "background:#fff9c4;" :
+                               "";
+                html += `<tr style='${evidenzia}'>`+
+                    `<td style='white-space:nowrap;padding:2px 4px;text-align:left;'><label style='display:flex;align-items:center;gap:4px;'><input type='checkbox' name='mezzi' value='${m.nome_radio}' ${checked} style='margin:0 2px 0 0;vertical-align:middle;'><span style='vertical-align:middle;'>${m.nome_radio}</span></label></td>`+
+                    `<td style='padding:2px 4px;text-align:left;'>${m.tipo_mezzo || ''}</td>`+
+                    `<td style='padding:2px 4px;text-align:left;'>${m.convenzione || ''}</td>`+
+                    `<td style='padding:2px 4px;text-align:left;'>${distanza}</td>`+
+                `</tr>`;
+            });
+            html += `</tbody></table>`;
+
+            const mezziAssegnatiDiv = document.getElementById('mezziAssegnatiScroll');
+            if (mezziAssegnatiDiv) mezziAssegnatiDiv.innerHTML = html;
+        };
+
         const indirizzoSpan = document.getElementById('missione-indirizzo');
         if (indirizzoSpan) indirizzoSpan.textContent = call.location || call.indirizzo || '';
         const indirizzoInput = document.getElementById('indirizzo');
@@ -905,7 +1023,7 @@ class EmergencyDispatchGame {
             ).join('');
         }
 
-        // Mostra solo mezzi in stato 1, 2, 6, 7 oppure già assegnati
+        // Mostra mezzi in stato 1, 2, 6, 7 oppure già assegnati
         const mezziFiltrati = mezzi.filter(m => [1,2,6,7].includes(m.stato) || (call.mezziAssegnati||[]).includes(m.nome_radio));
         let html = `<table class='stato-mezzi-table' style='width:100%;margin-bottom:0;'>
             <thead><tr>
@@ -917,21 +1035,21 @@ class EmergencyDispatchGame {
             <tbody>`;
         mezziFiltrati.forEach(m => {
             const checked = (call.mezziAssegnati||[]).includes(m.nome_radio) ? 'checked' : '';
-            const disabled = (m.stato !== 1 && !checked) ? 'disabled' : '';
-            let distanza = '';
-            if(call && call.lat && call.lon && m.lat && m.lon) {
-                distanza = distanzaKm(call.lat, call.lon, m.lat, m.lon).toFixed(1) + ' km';
-            }
-            // Evidenzia in rosso i mezzi in stato 2 e in giallo quelli in stato 6
-            const evidenzia = m.stato === 2 ? "background:#ffcdd2;" : m.stato === 6 ? "background:#fff9c4;" : "";
+            let distanza = (m._dist !== undefined && isFinite(m._dist))
+                ? `${m._dist.toFixed(1)} km`
+                : `<span data-mezzo-dist="${m.nome_radio}">...</span>`;
+            let evidenzia = m.stato === 2 ? "background:#ffcdd2;" :
+                           m.stato === 6 ? "background:#fff9c4;" :
+                           "";
             html += `<tr style='${evidenzia}'>`+
-                `<td style='white-space:nowrap;padding:2px 4px;text-align:left;'><label style='display:flex;align-items:center;gap:4px;'><input type='checkbox' name='mezzi' value='${m.nome_radio}' ${checked} ${disabled} style='margin:0 2px 0 0;vertical-align:middle;'><span style='vertical-align:middle;'>${m.nome_radio}</span></label></td>`+
+                `<td style='white-space:nowrap;padding:2px 4px;text-align:left;'><label style='display:flex;align-items:center;gap:4px;'><input type='checkbox' name='mezzi' value='${m.nome_radio}' ${checked} style='margin:0 2px 0 0;vertical-align:middle;'><span style='vertical-align:middle;'>${m.nome_radio}</span></label></td>`+
                 `<td style='padding:2px 4px;text-align:left;'>${m.tipo_mezzo || ''}</td>`+
                 `<td style='padding:2px 4px;text-align:left;'>${m.convenzione || ''}</td>`+
                 `<td style='padding:2px 4px;text-align:left;'>${distanza}</td>`+
             `</tr>`;
         });
         html += `</tbody></table>`;
+
         const mezziAssegnatiDiv = document.getElementById('mezziAssegnatiScroll');
         if (mezziAssegnatiDiv) mezziAssegnatiDiv.innerHTML = html;
         attachBtnListeners();
@@ -945,7 +1063,7 @@ class EmergencyDispatchGame {
                     const mezziTipo = mezziFiltrati.filter(m => m.tipo_mezzo && m.tipo_mezzo.startsWith(tipo));
                     for (const m of mezziTipo) {
                         const cb = checkboxes.find(c => c.value === m.nome_radio);
-                        if (cb && !cb.checked && !cb.disabled) {
+                        if (cb && !cb.checked) {
                             cb.checked = true;
                             break;
                         }
@@ -1002,9 +1120,9 @@ class EmergencyDispatchGame {
         if (callDiv) callDiv.remove();
         if (call._marker) call._marker.setIcon(L.icon({
             iconUrl: 'src/assets/marker-rosso.png',
-            iconSize: [28, 28],
-            iconAnchor: [14, 28],
-            popupAnchor: [0, -28]
+            iconSize: [36, 36],    // increased size
+            iconAnchor: [18, 36],  // center bottom
+            popupAnchor: [0, -36]
         }));
     }
 
@@ -1043,6 +1161,43 @@ if (typeof window !== 'undefined') {
         console.log("EmergencyDispatchGame class initialized and exposed to global scope");
     }
 }
+
+// Funzione per ottenere un percorso stradale da OSRM tra due coordinate (ritorna array di [lat,lon])
+async function getPercorsoStradaleOSRM(lat1, lon1, lat2, lon2) {
+    const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=full&geometries=geojson`;
+    try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data.routes && data.routes[0] && data.routes[0].geometry && data.routes[0].geometry.coordinates) {
+            // OSRM restituisce [lon,lat], convertiamo in [lat,lon]
+            return data.routes[0].geometry.coordinates.map(([lon, lat]) => [lat, lon]);
+        }
+    } catch (e) {
+        console.error('Errore richiesta OSRM:', e);
+    }
+    // fallback: linea retta
+    return [[lat1, lon1], [lat2, lon2]];
+}
+
+// Funzione asincrona per ottenere la distanza su strada tramite OSRM (in km)
+window.getDistanzaStradaleOSRM = async function(lat1, lon1, lat2, lon2, tipoMezzo = '') {
+    if (tipoMezzo === 'ELI') {
+        // Per ELI usa distanza in linea d'aria
+        return distanzaKm(lat1, lon1, lat2, lon2);
+    }
+    const url = `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`;
+    try {
+        const resp = await fetch(url);
+        const data = await resp.json();
+        if (data.routes && data.routes[0] && typeof data.routes[0].distance === 'number') {
+            return data.routes[0].distance / 1000; // metri -> km
+        }
+    } catch (e) {
+        console.error('Errore richiesta OSRM per distanza:', e);
+    }
+    // fallback: linea retta
+    return distanzaKm(lat1, lon1, lat2, lon2);
+};
 
 // Aggiorna la lista dei mezzi e i loro stati in tempo reale
 GameUI.prototype.updateStatoMezzi = function(mezzoCambiato = null) {
@@ -1095,14 +1250,14 @@ GameUI.prototype.updateStatoMezzi = function(mezzoCambiato = null) {
         return '';
     }
 
-    altriMezzi.forEach(m => {
+    // Mostra TUTTI i mezzi: prima gli altri, poi quelli in stato 8
+    [...altriMezzi, ...mezziStato8].forEach(m => {
         const stato = m.stato;
         const statoLabel = getStatoLabel(stato);
         const comunicazione = Array.isArray(m.comunicazioni) ?
             (m.comunicazioni.find(c => c.includes('Report pronto')) || '') : '';
         const lampeggia = (m._msgLampeggia && comunicazione.includes('Report pronto')) ?
             'animation: mezzo-lamp 1s linear infinite alternate;' : '';
-        
         div.innerHTML += `
             <div class="mezzo-row" style="display:flex;align-items:center;margin-bottom:4px;cursor:pointer;${lampeggia}" data-mezzo-id="${m.nome_radio}">
                 <div class="mezzo-cell" style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">

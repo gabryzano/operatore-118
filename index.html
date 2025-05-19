@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulatore Centrale Operativa</title>
+    <title>Operatore 118</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="icon" type="image/png" href="src/assets/logo118.png">
@@ -244,8 +244,21 @@
                     // Aggiorna il giorno solo se non è stato impostato manualmente
                     if(!window._dayManuallySet) {
                         const giorniSettimanaIT = ['Domenica', 'Lunedì', 'Martedì', 'Mercoledì', 'Giovedì', 'Venerdì', 'Sabato'];
-                        const now = window.simTime ? new Date(new Date().setHours(0,0,0,0) + window.simTime * 1000) : new Date();
-                        window.simDay = giorniSettimanaIT[now.getDay()];
+                        // Calcola il giorno simulato in base ai secondi
+                        let sec = window.simTime||0;
+                        let dayIdx = new Date().getDay();
+                        if (typeof window.simDay !== 'undefined') {
+                            dayIdx = giorniSettimanaIT.indexOf(window.simDay);
+                            if(dayIdx === -1) dayIdx = new Date().getDay();
+                        }
+                        // Se si supera le 23:59:59, passa al giorno successivo e resetta l'orario
+                        if (sec >= 24*3600) {
+                            sec = sec % (24*3600);
+                            window.simTime = sec;
+                            dayIdx = (dayIdx + 1) % 7;
+                            window.simDay = giorniSettimanaIT[dayIdx];
+                        }
+                        window.simDay = giorniSettimanaIT[dayIdx];
                     }
                     let t = window.simDay + ' ';
                     const sec = window.simTime||0;
@@ -253,7 +266,8 @@
                     const m = Math.floor((sec%3600)/60).toString().padStart(2,'0');
                     const s = (sec%60).toString().padStart(2,'0');
                     t += h+":"+m+":"+s;
-                    el.textContent = t;                }
+                    el.textContent = t;
+                }
             };
             window.updateSimClock();
         })();

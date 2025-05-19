@@ -189,7 +189,9 @@ class GameUI {
 
             let html = '';
             const mezziAssegnati = (call.mezziAssegnati||[]);
-            const mezzi = (this.game.mezzi||[]).filter(m=>mezziAssegnati.includes(m.nome_radio));
+            // Exclude vehicles that have returned to base (state 7)
+            const mezzi = (this.game.mezzi||[])
+                .filter(m => mezziAssegnati.includes(m.nome_radio) && m.stato !== 7);
             const ospedali = (window.game && window.game.hospitals) ? window.game.hospitals : (this.game.hospitals||[]);
 
             // Se non ci sono ospedali, mostra messaggio di caricamento
@@ -199,7 +201,7 @@ class GameUI {
                 }
                 setTimeout(()=>{
                     this.updateMissioneInCorso(call);
-                    if ((window.game && window.game.hospitals) ? window.game.hospitals.length > 0 : (this.game.hospitals||[]).length > 0 && window.game && window.game.calls) {
+                    if ((window.game && window.game.hospitals) ? window.game.hospedali.length > 0 : (this.game.hospitals||[]).length > 0 && window.game && window.game.calls) {
                         let callsArr = [];
                         if (typeof window.game.calls.forEach === 'function') {
                             window.game.calls.forEach(c => callsArr.push(c));
@@ -251,8 +253,8 @@ class GameUI {
                 }
 
                 // Gestione menu ospedali e codice trasporto
-                // Always show menu when report pronto is received
-                const showMenu = hasReportPronto;
+                // Mostra il menu solo dopo il report del singolo mezzo e se non confermato
+                const showMenu = !m._trasportoConfermato && hasReportPronto;
                 if (showMenu) {
                     almenoUnMezzoReportPronto = true;
                     // Reset dei campi solo la prima volta che il menu appare
@@ -265,14 +267,17 @@ class GameUI {
                         m._menuOspedaliShown = true;
                     }
 
-                    // Ordina ospedali per distanza
+                    // Ordina ospedali per distanza aerea e calcola distanza in km
                     let ospedaliOrdinati = ospedali.slice();
                     if (call && call.lat && call.lon) {
-                        ospedaliOrdinati.sort((a, b) => {
-                            const da = distanzaKm(call.lat, call.lon, a.lat, a.lon);
-                            const db = distanzaKm(call.lat, call.lon, b.lat, b.lon);
-                            return da - db;
-                        });
+                        ospedaliOrdinati = ospedaliOrdinati
+                            .map(o => {
+                                const d = (o.lat && o.lon)
+                                    ? distanzaKm(call.lat, call.lon, o.lat, o.lon)
+                                    : Infinity;
+                                return { ...o, _dist: d };
+                            })
+                            .sort((a, b) => a._dist - b._dist);
                     }
 
                     // Per veicoli MSA1 e MSA2 mostriamo solo rientro o accompagna
@@ -286,12 +291,11 @@ class GameUI {
                         // Genera il menu ospedali
                         const selectOsp = `<select class='select-ospedale' data-nome='${m.nome_radio}'>`+
                             `<option value="__rientro__">Rientro in sede</option>`+
-                            ospedaliOrdinati.map(o=>{
-                                let dist = '';
-                                if (call && call.lat && call.lon && o.lat && o.lon) {
-                                    dist = distanzaKm(call.lat, call.lon, o.lat, o.lon).toFixed(1) + ' km';
-                                }
-                                return `<option value="${o.nome.trim()}">${o.nome.trim()}${dist ? ' ('+dist+')' : ''}</option>`;
+                            ospedaliOrdinati.map(o => {
+                                const distText = (o._dist !== undefined && isFinite(o._dist))
+                                    ? ` (${o._dist.toFixed(1)} km)`
+                                    : '';
+                                return `<option value="${o.nome.trim()}">${o.nome.trim()}${distText}</option>`;
                             }).join('')+
                             `</select>`;
                         // Genera il menu codice trasporto
@@ -375,20 +379,19 @@ class GameUI {
             }, 100);
         }
     }
-
+    
+    // Close mission entry when no vehicles remain assigned
+    closeMissioneInCorso(call) {
+        // Remove mission element from UI
+        const elem = document.getElementById(`evento-${call.missioneId}`);
+        if (elem) elem.remove();
+        // Remove call marker from map
+        if (call._marker && this.game && this.game.map) {
+            this.game.map.removeLayer(call._marker);
+        }
+        // Remove call from game data
+        if (this.game && this.game.calls) {
+            this.game.calls.delete(call.id);
+        }
+    }
 }
-
-// Close an ongoing mission when last vehicle unassigned or arrives at hospital
-GameUI.prototype.closeMissioneInCorso = function(call) {
-    // Remove UI element
-    const elem = document.getElementById(`evento-${call.missioneId}`);
-    if (elem) elem.remove();
-    // Remove marker from map
-    if (call._marker && window.game && window.game.map) {
-        window.game.map.removeLayer(call._marker);
-    }
-    // Remove call from game calls
-    if (window.game && window.game.calls && typeof window.game.calls.delete === 'function') {
-        window.game.calls.delete(call.id);
-    }
-};

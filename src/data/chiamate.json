@@ -333,5 +333,43 @@
             "MSA1": "Paziente gravida con emorragia massiva, sospetto distacco di placenta. FC 135 bpm, PA 55/25 mmHg, SpO₂ 70%. Ringer 500ml + Tranex 1 gr EV. Richiesta MSA2. [punto nascita]",
             "MSA2": "Femmina, 30 anni, incosciente, gravidanza a 35 settimane. Shock ipovolemico da emorragia acuta. Intubata, Ringer 500ml + Tranex 1 gr EV. Allertare la sala parto e rianimazione. [punto nascita]"
         }
+    },
+     "chiamata_21": {
+        "testo_chiamata": "Ciao, siamo a (indirizzo scuola/ abitazione/ esercizio pubblico). Un bambino di 3 anni sta respirando male, ha il viso arrossato e fa fatica a parlare. Ha un respiro molto strano, come se fischiasse. Abbiamo chiamato i genitori ma serve aiuto subito!",
+        "caso_stabile": {
+            "MSB": "Maschio, 3 anni, vigile. Respiro accelerato ma senza segni di fatica. FC 110 bpm, PA 95/60 mmHg, SpO₂ 98%. Anamnesi: bronchite recente. [pediatria]",
+            "MSA1": "Maschio, 3 anni, GCS 15. SpO₂ 97%, FC 112 bpm. Riferito episodio simile in passato. Somministrato broncodilatatore aerosol. Anamnesi: bronchite recente. [pediatria]",
+            "MSA2": "Maschio, 3 anni, cosciente. Parametri stabili, tosse secca, rantoli diffusi. Monitoraggio e osservazione. Anamnesi: bronchite recente. [pediatria]"
+        },
+        "caso_poco_stabile": {
+            "MSB": "Maschio, 3 anni, dispnoico, stridore inspiratorio. FC 120 bpm, PA 90/50 mmHg, SpO₂ 91%. In trattamento con O₂. Anamnesi: bronchite recente. [pediatria]",
+            "MSA1": "Maschio, 3 anni, GCS 14. Cianosi periferica, respiro sibilante. FC 125 bpm, PA 85/55 mmHg, SpO₂ 89%. Somministrato broncodilatatore + cortisone EV. Anamnesi: bronchite recente. [pediatria]",
+            "MSA2": "Maschio, 3 anni, agitato, SpO₂ 88%. Tachicardia, respiro faticoso. Nebulizzatore in corso. Anamnesi: bronchite recente. [pediatria]"
+        },
+        "caso_critico": {
+            "MSB": "Maschio, 3 anni, incosciente. FC 50 bpm, PA 60/30 mmHg, SpO₂ 72%. Arresto respiratorio imminente. Richiesta MSA. [EAS]",
+            "MSA1": "Paziente ipossico grave. GCS 6. Intubazione d’urgenza, O₂ 100%, adrenalina nebulizzata. Richiesto MSA2. [EAS]",
+            "MSA2": "Maschio, 3 anni, GCS 3. Apnea. Intubato, ventilato, trasferimento urgente. [EAS]"
+        }
+    },
+    "chiamata_22": {
+        "testo_chiamata": "Pronto? Siamo in (indirizzo abitazione / rsa ). Una signora di 85 anni ha iniziato a parlare in modo strano e non riconosce nessuno. Un minuto prima era tranquilla. Ora sembra completamente confusa e si muove a scatti. Serve aiuto immediato.",
+        "caso_stabile": {
+            "MSB": "Femmina, 85 anni, vigile, disorientata nel tempo. Glicemia 112 mg/dL, PA 130/75 mmHg, FC 86 bpm, SpO₂ 97%. Episodio isolato, anamnesi: demenza iniziale. [PS]",
+            "MSA1": "Femmina, 85 anni, GCS 15. Afasia lieve, no emiparesi. Glicemia 112 mg/dL, PA 130/75 mmHg, FC 86 bpm, SpO₂ 97%. Episodio isolato, anamnesi: demenza iniziale. [PS]",
+            "MSA2": "Femmina, 85 anni, lucida al momento dell’arrivo. ECG e glicemia normali. Episodio isolato, anamnesi: demenza iniziale. [PS]"
+        },
+        "caso_poco_stabile": {
+            "MSB": "Femmina, 85 anni, confusa, afasica, GCS 13. FC 96 bpm, PA 110/70 mmHg, SpO₂ 94%. Glicemia 82 mg/dL. [stroke unit]",
+            "MSA1": "Femmina, 85 anni, GCS 12. Paresi facciale dx, linguaggio incomprensibile. FC 98 bpm, PA 105/65 mmHg, SpO₂ 92%. Protocollo stroke attivato. [stroke unit]",
+            "MSA2": "Femmina, 85 anni, disorientata, difficoltà motorie. FC 102 bpm, PA 100/60 mmHg, SpO₂ 90%. Somministrato O₂ e accesso EV. [stroke unit]"
+        },
+        "caso_critico": {
+            "MSB": "Femmina, 85 anni, incosciente. GCS 5. FC 38 bpm, PA 65/30 mmHg, SpO₂ 76%. Sospetto ictus. Richiesta MSA. [rianimazione]",
+            "MSA1": "GCS 4, pupille anisocoriche, crisi convulsiva in atto. Sedata con Midazolam 10 mg. SpO₂ 70%, PA 55/25 mmHg. Richiesta MSA2. [rianimazione]",
+            "MSA2": "Femmina, 85 anni, GCS 3. Intubata, in shock neurogeno. Sospetta emorragia cerebrale. Trasferimento urgente. [NCH]"
+        }
     }
+
+
 }

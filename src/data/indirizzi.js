@@ -21,7 +21,7 @@ window.indirizziReali = [
     { indirizzo: "Via San Zeno, 119, 25124 Brescia BS", lat: 45.523400, lon: 10.234900 },
     { indirizzo: "Via Chiusure, 150, 25127 Brescia BS", lat: 45.541600, lon: 10.176800 },
     { indirizzo: "Via Dal Molin, 27, 25015 Desenzano del Garda BS", lat: 45.471000, lon: 10.535000 },
-    { indirizzo: "Via G. Di Vittorio, 2, 25015 Desenzano del Garda BS", lat: 45.478200, lon: 10.541800 },
+    { indirizzo: "Via G. Di Vittorio, 2, 25015 Desenzano del Garda BS", lat: 45.4580074, lon: 10.5669277 },
     { indirizzo: "Via A. Gramsci, 10, 25015 Desenzano del Garda BS", lat: 45.470800, lon: 10.541200 },
     { indirizzo: "Via G. Carducci, 5, 25015 Desenzano del Garda BS", lat: 45.468900, lon: 10.541900 },
     { indirizzo: "Via G. Marconi, 20, 25015 Desenzano del Garda BS", lat: 45.470500, lon: 10.541000 },
