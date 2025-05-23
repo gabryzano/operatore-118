@@ -1,4 +1,3 @@
-
 /**
  * Determina se un mezzo è operativo in base a giorno e orario di servizio da mezzi_sra.json
  * @param {Object} mezzo - Il mezzo da verificare
@@ -71,6 +70,20 @@ function isMezzoOperativo(mezzo, orarioSimulato, dataSimulata = new Date(), gior
         } else {
             return minutoGiorno >= inizio || minutoGiorno < fine;
         }
+    }
+
+    // Simple interval pattern 'HH:mm-HH:mm' (covers H24 as '00:00-00:00')
+    const hyphenMatch = orarioLavoro.match(/^(\d{1,2}:\d{2})\s*-\s*(\d{1,2}:\d{2})$/);
+    if (hyphenMatch) {
+        const [startStr, endStr] = [hyphenMatch[1], hyphenMatch[2]];
+        const [h1, m1] = startStr.split(':').map(Number);
+        const [h2, m2] = endStr.split(':').map(Number);
+        const inizio2 = h1 * 60 + m1;
+        const fine2 = h2 * 60 + m2;
+        if (inizio2 < fine2) {
+            return minutoGiorno >= inizio2 && minutoGiorno < fine2;
+        }
+        return minutoGiorno >= inizio2 || minutoGiorno < fine2;
     }
 
     // Orari tipo "dalle 00:00 alle 00:00" (H24)

@@ -580,6 +580,39 @@ class EmergencyDispatchGame {
                 this.postazioniMap[key].mezzi.push(m);
             });
 
+            // Load Creli dispatch center vehicles  
+            try {  
+                const resCreli = await fetch('src/data/Creli.json');  
+                let creli = await resCreli.json();  
+                if (!Array.isArray(creli)) {  
+                    const arr = Object.values(creli).find(v => Array.isArray(v));  
+                    creli = arr || [];  
+                }  
+                creli.forEach(item => {  
+                    const nomePost = (item['Nome Postazione'] || '').trim();  
+                    if (!nomePost) return;  
+                    const coords = item['Coordinate Postazione']?.split(',').map(s => Number(s.trim())) || [];  
+                    const lat = coords[0], lon = coords[1];  
+                    if (lat == null || lon == null) return;  
+                    // build mezzo object  
+                    const mezzo = {  
+                        nome_radio: (item['Nome radio'] || '').trim(),  
+                        postazione: nomePost,  
+                        tipo_mezzo: item['Mezzo'] || '',  
+                        convenzione: item['Convenzione'] || '',  
+                        'Orario di lavoro': item['Orario di lavoro'] || '',  
+                        lat,  lon,  stato: 1,  isCreli: true,  _marker: null,  _callMarker: null,  _ospedaleMarker: null  
+                    };  
+                    // register in this.mezzi and postazioniMap  
+                    this.mezzi.push(mezzo);  
+                    const key = nomePost + '_' + lat + '_' + lon;  
+                    if (!this.postazioniMap[key]) {  
+                        this.postazioniMap[key] = { nome: nomePost, lat, lon, mezzi: [], isCreli: true };  
+                    }  
+                    this.postazioniMap[key].mezzi.push(mezzo);  
+                });  
+            } catch(e) { console.error('Error loading Creli.json:', e); }  
+
             aggiornaDisponibilitaMezzi();
             this.updatePostazioneMarkers();
             this.updateMezzoMarkers();
@@ -612,6 +645,39 @@ class EmergencyDispatchGame {
                     indirizzo: hosp.INDIRIZZO || ""
                 };
             }).filter(h => h.lat !== null && h.lon !== null && !isNaN(h.lat) && !isNaN(h.lon));
+
+            // Add PS SOREU Laghi hospitals (prefix SRL)
+            try {
+                const resSRL = await fetch('src/data/PS SOREU laghi.json');
+                let srlList = await resSRL.json();
+                (Array.isArray(srlList) ? srlList : []).forEach(h => {
+                    const coords = (h.COORDINATE||'').split(',').map(s => Number(s.trim()));
+                    const lat = coords[0], lon = coords[1];
+                    if (lat != null && lon != null) hospitals.push({ nome: `(SRL) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: '' });
+                });
+            } catch(e) { console.error('Error loading PS SOREU laghi:', e); }
+
+            // Add PS SOREU Metro hospitals (prefix SRM)
+            try {
+                const resSRM = await fetch('src/data/PS SOREU Metro.json');
+                let srmList = await resSRM.json();
+                (Array.isArray(srmList) ? srmList : []).forEach(h => {
+                    const coords = (h.COORDINATE||'').split(',').map(s => Number(s.trim()));
+                    const lat = coords[0], lon = coords[1];
+                    if (lat != null && lon != null) hospitals.push({ nome: `(SRM) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: '' });
+                });
+            } catch(e) { console.error('Error loading PS SOREU Metro:', e); }
+
+            // Add PS SOREU Pianura hospitals (prefix SRP)
+            try {
+                const resSRP = await fetch('src/data/PS SOREU pianura.json');
+                let srpList = await resSRP.json();
+                (Array.isArray(srpList) ? srpList : []).forEach(h => {
+                    const coords = (h.COORDINATE||'').split(',').map(s => Number(s.trim()));
+                    const lat = coords[0], lon = coords[1];
+                    if (lat != null && lon != null) hospitals.push({ nome: `(SRP) ${h.OSPEDALE?.trim()||''}`, lat, lon, indirizzo: '' });
+                });
+            } catch(e) { console.error('Error loading PS SOREU pianura:', e); }
 
             this.hospitals = hospitals;
             hospitals.forEach(hosp => {
@@ -648,8 +714,8 @@ class EmergencyDispatchGame {
         });
     }
 
-    getPostazioneIcon(hasLiberi) {
-        const bg = hasLiberi ? "#43a047" : "#d32f2f";
+    getPostazioneIcon(hasLiberi, isCreli = false) {
+        const bg = isCreli ? "#ffffff" : (hasLiberi ? "#43a047" : "#d32f2f");
         return L.divIcon({
             className: 'postazione-marker',
             html: `<div style="font-size:18px;background:${bg};border-radius:6px;width:24px;height:24px;display:flex;align-items:center;justify-content:center;">🏠</div>`,
@@ -699,7 +765,7 @@ class EmergencyDispatchGame {
             }
             
             const marker = L.marker([postazione.lat, postazione.lon], { 
-                icon: this.getPostazioneIcon(hasLiberi) 
+                icon: this.getPostazioneIcon(hasLiberi, postazione.isCreli) 
             }).addTo(this.map)
             .bindPopup(`<div style="font-weight:bold;font-size:15px;">${postazione.nome}</div>${mezziHtml}`);
             
@@ -735,7 +801,7 @@ class EmergencyDispatchGame {
                 marker.setPopupContent(
                     `<div style="font-weight:bold;font-size:15px;">${postazione.nome}</div>${mezziHtmlNow}`
                 );
-                marker.setIcon(this.getPostazioneIcon(hasLiberiNow));
+                marker.setIcon(this.getPostazioneIcon(hasLiberiNow, postazione.isCreli));
             });
             
             this._postazioneMarkers.push(marker);

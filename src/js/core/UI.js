@@ -30,7 +30,7 @@ class GameUI {
                 <b>Nuova chiamata in arrivo</b>
             </div>
             <div class="call-details" style="display:none;">
-                <div class="call-sim-voice">Simulazione chiamata 118: <br><span class="sim-patologia">${call.simText || 'Paziente con sintomi da valutare...'}</span></div>
+                <div class="call-sim-voice"><span class="sim-patologia">${call.simText || 'Paziente con sintomi da valutare...'}</span></div>
                 <div class="call-indirizzo"><b>Indirizzo:</b> ${call.indirizzo || call.location || 'Indirizzo sconosciuto'}</div>
                 <div class="call-actions" style="margin-top:10px;">
                     <button class="btn-crea-missione">Crea missione</button>
@@ -201,7 +201,7 @@ class GameUI {
                 }
                 setTimeout(()=>{
                     this.updateMissioneInCorso(call);
-                    if ((window.game && window.game.hospitals) ? window.game.hospedali.length > 0 : (this.game.hospitals||[]).length > 0 && window.game && window.game.calls) {
+                    if ((window.game && window.game.hospitals) ? window.game.hospedali.length > 0 : (this.game.hospedali||[]).length > 0 && window.game && window.game.calls) {
                         let callsArr = [];
                         if (typeof window.game.calls.forEach === 'function') {
                             window.game.calls.forEach(c => callsArr.push(c));

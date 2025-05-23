@@ -847,33 +847,6 @@
             "Giorni": "LUN-DOM"
         },
         {
-            "Nome Postazione": "Elisoccorso Bergamo",
-            "Coordinate Postazione": "45.6875762,9.6341037",
-            "Mezzo": "ELI",
-            "Nome radio": "ELI_BG",
-            "Convenzione": "H12",
-            "Orario di lavoro": "dalle 7:30 alle 19:30",
-            "Giorni": "LUN-DOM"
-        },
-        {
-            "Nome Postazione": "Elisoccorso Brescia",
-            "Coordinate Postazione": "45.427483, 10.325880",
-            "Mezzo": "ELI",
-            "Nome radio": "ELI_BS ",
-            "Convenzione": "H24",
-            "Orario di lavoro": "dalle 00:00 alle 00:00",
-            "Giorni": "LUN-DOM"
-        },
-        {
-            "Nome Postazione": "Elisoccorso Sondrio",
-            "Coordinate Postazione": "46.153788, 9.791441",
-            "Mezzo": "ELI",
-            "Nome radio": "ELI_SO",
-            "Convenzione": "H24",
-            "Orario di lavoro": "dalle 00:00 alle 00:00",
-            "Giorni": "LUN-DOM"
-        },
-        {
             "Nome Postazione": "Garda Emergenza Moniga",
             "Coordinate Postazione": "45.526835,10.532725",
             "Mezzo": "MSB",

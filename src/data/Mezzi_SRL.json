@@ -1,0 +1,56 @@
+[
+    {
+        "Nome Postazione": "Croce Rossa Italiana - Colico",
+        "Coordinate Postazione": "46.1392862,9.3956714",
+        "Mezzo": "MSB",
+        "Nome radio": "CRICOL_117.01B1",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Croce Rossa Italiana - Colico",
+        "Coordinate Postazione": "46.1392862,9.3956714",
+        "Mezzo": "MSA2",
+        "Nome radio": "LC_006",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Postazione AREU Lecco",
+        "Coordinate Postazione": "45.852326, 9.415311",
+        "Mezzo": "MSA2",
+        "Nome radio": "LC_002",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Postazione AREU Merate",
+        "Coordinate Postazione": "45.697072, 9.426777",
+        "Mezzo": "MSA1",
+        "Nome radio": "LC_004",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Volontari Calolziocorte",
+        "Coordinate Postazione": "45.8033924,9.4224543",
+        "Mezzo": "MSB",
+        "Nome radio": "VOLCAL_106.05A1",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Croce Bianca Merate",
+        "Coordinate Postazione": "45.6932192,9.4268477",
+        "Mezzo": "MSB",
+        "Nome radio": "BIAMER_112.06A1",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    }
+]

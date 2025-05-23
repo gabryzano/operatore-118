@@ -1,0 +1,209 @@
+[
+    {
+        "Nome Postazione": "Postazione AREU - Melzo",
+        "Coordinate Postazione": "45.508682, 9.426665",
+        "Mezzo": "MSA2",
+        "Nome radio": "MI_010",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Postazione AREU - Asola",
+        "Coordinate Postazione": "45.223674, 10.411749",
+        "Mezzo": "MSA2",
+        "Nome radio": "MN_005 ",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Postazione AREU - Cremona",
+        "Coordinate Postazione": "45.129359, 10.053352",
+        "Mezzo": "MSA2",
+        "Nome radio": "CR_001",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Postazione AREU - Crema",
+        "Coordinate Postazione": " 45.3532965,9.6811594",
+        "Mezzo": "MSA2",
+        "Nome radio": "CR_002",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Postazinoe AREU - Volta Mantovana",
+        "Coordinate Postazione": "45.3237418,10.6564798",
+        "Mezzo": "MSA1",
+        "Nome radio": "MN_006",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Postazinoe AREU - Volta Mantovana",
+        "Coordinate Postazione": "45.3237418,10.6564798",
+        "Mezzo": "MSB",
+        "Nome radio": "AZZ_MN_162.01C1",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Croce Azzurra Trezzo",
+        "Coordinate Postazione": "45.592785, 9.507118",
+        "Mezzo": "MSB",
+        "Nome radio": "AZZTRZ_116.07B1",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Croce Bianca Melzo",
+        "Coordinate Postazione": "45.509385, 9.428785",
+        "Mezzo": "MSB",
+        "Nome radio": "BIAMLZ_162.16A1 ",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Croce Bianca Rivolta",
+        "Coordinate Postazione": "45.4616671,9.5124742",
+        "Mezzo": "MSB",
+        "Nome radio": " BIARIV_140.01C1",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Pozzuolo dist. BIAMLZ",
+        "Coordinate Postazione": "45.513881, 9.452676",
+        "Mezzo": "MSB",
+        "Nome radio": "BIAMLZ_163.16A2 ",
+        "Convenzione": "H8",
+        "Orario di lavoro": "8:00-16:00",
+        "Giorni": "LUN-SAB"
+    },
+    {
+        "Nome Postazione": "Misericordia Inzago",
+        "Coordinate Postazione": "45.541701, 9.482850",
+        "Mezzo": "MSB",
+        "Nome radio": "MISINZ_310",
+        "Convenzione": "GET",
+        "Orario di lavoro": "FASCIA SERALE",
+        "Giorni": "LUN-SAB"
+    },
+    {
+        "Nome Postazione": "Croce dell'Adda",
+        "Coordinate Postazione": "45.534073, 9.518203",
+        "Mezzo": "MSB",
+        "Nome radio": "PASCAD_228",
+        "Convenzione": "GET",
+        "Orario di lavoro": "8:00-14:00",
+        "Giorni": "random"
+    },
+    {
+        "Nome Postazione": "Croce dell'Adda",
+        "Coordinate Postazione": "45.534073, 9.518203",
+        "Mezzo": "MSB",
+        "Nome radio": " PASCAD_227.17A2",
+        "Convenzione": "H8",
+        "Orario di lavoro": "14:00-22:00",
+        "Giorni": "LUN-SAB"
+    },
+    {
+        "Nome Postazione": "Croce Verde Martesana",
+        "Coordinate Postazione": "45.527238, 9.500115",
+        "Mezzo": "MSB",
+        "Nome radio": "VERCAD_340",
+        "Convenzione": "GET",
+        "Orario di lavoro": "FASCIA DIURNA",
+        "Giorni": "LUN-VEN"
+    },
+    {
+        "Nome Postazione": "Croce Rossa Italiana - Asola",
+        "Coordinate Postazione": "45.219469,10.420041",
+        "Mezzo": "MSB",
+        "Nome radio": "CRIASO_311",
+        "Convenzione": "GET",
+        "Orario di lavoro": "FASCIA NOTTURNA",
+        "Giorni": "random"
+    },
+    {
+        "Nome Postazione": "Croce Rossa Italiana - Crema",
+        "Coordinate Postazione": "45.3531338,9.6885201",
+        "Mezzo": "MSB",
+        "Nome radio": "CRICRE_104.01A1",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Croce Verde Crema",
+        "Coordinate Postazione": "45.3583577,9.675029",
+        "Mezzo": "MSB",
+        "Nome radio": "VERCRM_145.01B1",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Croce Verde Soncino",
+        "Coordinate Postazione": "45.3967009,9.8632095",
+        "Mezzo": "MSB",
+        "Nome radio": " VERSON_128.01D1",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Soccorso Azzurro Castiglione D/S",
+        "Coordinate Postazione": "45.3890466,10.4942415",
+        "Mezzo": "MSB",
+        "Nome radio": "AZZ_MN_160.01B1",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Soresina Soccorso",
+        "Coordinate Postazione": "45.28668,9.8734013",
+        "Mezzo": "MSA1",
+        "Nome radio": "CR_004 ",
+        "Convenzione": "H24",
+        "Orario di lavoro": "00:00-00:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Soresina Soccorso",
+        "Coordinate Postazione": "45.28668,9.8734013",
+        "Mezzo": "MSB",
+        "Nome radio": "SOCSOR_316 ",
+        "Convenzione": "GET",
+        "Orario di lavoro": "RANDOM",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Castel Goffredo Dist.",
+        "Coordinate Postazione": "45.303563,10.468309",
+        "Mezzo": "MSB",
+        "Nome radio": "CRIASO_112.01D1",
+        "Convenzione": "H12",
+        "Orario di lavoro": "20:00-8:00",
+        "Giorni": "LUN-DOM"
+    },
+    {
+        "Nome Postazione": "Castel Goffredo Dist.",
+        "Coordinate Postazione": "45.303563,10.468309",
+        "Mezzo": "MSB",
+        "Nome radio": "CRICST_112.01D1 ",
+        "Convenzione": "H12",
+        "Orario di lavoro": "8:00-20:00",
+        "Giorni": "LUN-DOM"
+    }
+]
