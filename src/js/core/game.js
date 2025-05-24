@@ -680,7 +680,11 @@ class EmergencyDispatchGame {
 
             // Add SRL vehicles (prefix mezzi_srl)
             try {
-                const resSRLMezzi = await fetch('src/data/mezzi_srl.json');
+                let resSRLMezzi = await fetch('./src/data/mezzi_srl.json');
+                if (!resSRLMezzi.ok) {
+                    // fallback to alternate path
+                    resSRLMezzi = await fetch('./data/mezzi_srl.json');
+                }
                 let srlMezzi = await resSRLMezzi.json();
                 if (!Array.isArray(srlMezzi)) {
                     const arr = Object.values(srlMezzi).find(v => Array.isArray(v));
@@ -711,7 +715,11 @@ class EmergencyDispatchGame {
 
             // Add SRP vehicles (prefix mezzi_srp)
             try {
-                const resSRPMezzi = await fetch('src/data/mezzi_srp.json');
+                let resSRPMezzi = await fetch('./src/data/mezzi_srp.json');
+                if (!resSRPMezzi.ok) {
+                    // fallback to alternate path
+                    resSRPMezzi = await fetch('./data/mezzi_srp.json');
+                }
                 let srpMezzi = await resSRPMezzi.json();
                 if (!Array.isArray(srpMezzi)) {
                     const arr = Object.values(srpMezzi).find(v => Array.isArray(v));
@@ -1463,6 +1471,7 @@ class EmergencyDispatchGame {
         }        // If mission already exists, update it; otherwise create new in Eventi in corso
         const missionElem = document.getElementById(`evento-${call.missioneId}`);
         if (missionElem) {
+
             this.ui.updateMissioneInCorso(call);
         } else {
             this.ui.moveCallToEventiInCorso(call);
@@ -1471,6 +1480,8 @@ class EmergencyDispatchGame {
         const callDiv = document.getElementById(`call-${call.id}`);
         if (callDiv) callDiv.remove();
         if (call._marker) call._marker.setIcon(L.icon({
+
+
 
             iconUrl: 'src/assets/marker-rosso.png',
             iconSize: [36, 36],    // increased size
