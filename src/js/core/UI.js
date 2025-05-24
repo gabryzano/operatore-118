@@ -25,16 +25,37 @@ class GameUI {
         const div = document.createElement('div');
         div.className = 'evento chiamata-arrivo';
         div.id = `call-${call.id}`;
+        
+        // Stile per le chiamate in arrivo: bordo lampeggiante
+        div.style.border = '2px solid #f44336';
+        div.style.borderRadius = '5px';
+        div.style.background = '#ffebee';
+        div.style.animation = 'pulsate 2s infinite';
+        
+        // Aggiungi stile keyframe per l'animazione pulsante
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes pulsate {
+                0% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0.7); }
+                70% { box-shadow: 0 0 0 10px rgba(244, 67, 54, 0); }
+                100% { box-shadow: 0 0 0 0 rgba(244, 67, 54, 0); }
+            }
+        `;
+        document.head.appendChild(style);
+        
         div.innerHTML = `
-            <div class="call-header" style="cursor:pointer;">
-                <b>Nuova chiamata in arrivo</b>
+            <div class="call-header" style="cursor:pointer;display:flex;align-items:center;">
+                <span style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:16px;">🚨</span>
+                    <b>Nuova chiamata in arrivo</b>
+                </span>
             </div>
             <div class="call-details" style="display:none;">
                 <div class="call-sim-voice"><span class="sim-patologia">${call.simText || 'Paziente con sintomi da valutare...'}</span></div>
                 <div class="call-indirizzo"><b>Indirizzo:</b> ${call.indirizzo || call.location || 'Indirizzo sconosciuto'}</div>
                 <div class="call-actions" style="margin-top:10px;">
-                    <button class="btn-crea-missione">Crea missione</button>
-                    <button class="btn-chiudi">Chiudi</button>
+                    <button class="btn-crea-missione" style="background:#1976d2;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;">Crea missione</button>
+                    <button class="btn-chiudi" style="background:#e53935;color:white;border:none;padding:6px 12px;border-radius:4px;cursor:pointer;margin-left:10px;">Chiudi</button>
                 </div>
             </div>
         `;
@@ -86,6 +107,53 @@ class GameUI {
         if(comuneMatch) comune = comuneMatch[1].replace(/\d+/g, '').trim();        let indirizzoSintetico = via;
         if(comune) indirizzoSintetico += ' - ' + comune;
         indirizzoSintetico = indirizzoSintetico.trim() || indirizzo;
+        
+        // Imposta lo stile base in base alla presenza o meno di mezzi
+        let missioneStyle = '';
+        let missioneStatusIcon = '';
+        let missioneStatusText = '';
+        
+        // Verifica se ci sono mezzi assegnati
+        const hasMezziAssegnati = call.mezziAssegnati && call.mezziAssegnati.length > 0;
+        
+        if (!hasMezziAssegnati) {
+            // Stile per missioni senza mezzi assegnati: bordo tratteggiato grigio
+            missioneStyle = 'border: 2px dashed #999; border-radius: 5px;';
+            missioneStatusText = '<span style="color:#999;font-size:12px;margin-left:10px;">■ Nessun mezzo assegnato</span>';
+        } else if (window.game && window.game.mezzi) {
+            const mezzi = window.game.mezzi.filter(m => (call.mezziAssegnati||[]).includes(m.nome_radio));
+            
+            // Verifica se c'è almeno un mezzo con report pronto
+            const hasReportPronto = mezzi.some(m => (m.comunicazioni||[]).some(c => c.toLowerCase().includes('report pronto')));
+            
+            // Verifica se c'è almeno un mezzo in trasporto verso ospedale
+            const hasOspedaleTransfer = mezzi.some(m => m.stato === 4);
+            
+            // Verifica se c'è almeno un mezzo in ospedale
+            const hasOspedale = mezzi.some(m => m.stato === 5 || m.stato === 6);
+            
+            if (hasOspedale) {
+                missioneStyle = 'border: 2px solid #ffca28; border-radius: 5px; background-color: #fff8e1;';
+                missioneStatusIcon = '<span style="font-size:16px;margin-left:10px;">🏥</span>';
+                missioneStatusText = '<span style="color:#e65100;font-size:12px;margin-left:5px;">■ Mezzo in ospedale</span>';
+            } else if (hasOspedaleTransfer) {
+                missioneStyle = 'border: 2px solid #66bb6a; border-radius: 5px; background-color: #e8f5e9;';
+                missioneStatusIcon = '<span style="font-size:16px;margin-left:10px;">🚑</span>';
+                missioneStatusText = '<span style="color:#1b5e20;font-size:12px;margin-left:5px;">■ In trasporto verso ospedale</span>';
+            } else if (hasReportPronto) {
+                missioneStyle = 'border: 2px solid #42a5f5; border-radius: 5px; background-color: #e3f2fd;';
+                missioneStatusIcon = '<span style="font-size:16px;margin-left:10px;">📋</span>';
+                missioneStatusText = '<span style="color:#0d47a1;font-size:12px;margin-left:5px;">■ Report pronto</span>';
+            } else {
+                // Missione con mezzi in stato normale
+                missioneStyle = 'border: 2px solid #5c6bc0; border-radius: 5px;';
+                missioneStatusText = '<span style="color:#3949ab;font-size:12px;margin-left:10px;">■ Mezzi assegnati</span>';
+            }
+        }
+        
+        // Aggiungi lo stile al div principale
+        div.setAttribute('style', missioneStyle);
+        
         // Ospedale e codice trasporto SOLO se confermati
         let ospedaleHtml = '';
         if (call.mezziAssegnati && call.mezziAssegnati.length > 0 && window.game && window.game.mezzi) {
@@ -95,10 +163,12 @@ class GameUI {
                 ospedaleHtml = ` <span style='margin-left:12px;'></span><span style='font-size:13px;'>Destinazione: <b>${mezzoConOspedale.ospedale.nome}</b></span> <span style='display:inline-block;width:5px;height:5px;margin-left:6px;vertical-align:middle;background:${getColoreCodice(mezzoConOspedale.codice_trasporto)};background-size:cover;'></span>`;
             }
         }
+        
         div.innerHTML = `            <div class="missione-header" style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer;">
                 <span>
                     <span class="missione-codice-box" style="display:inline-block;width:5px;height:5px;margin-right:8px;vertical-align:middle;background:${getColoreCodice(call.codice)};background-size:cover;"></span>
                     ${call.missioneId} - ${indirizzoSintetico}${ospedaleHtml}
+                    ${missioneStatusIcon}${missioneStatusText}
                 </span>
                 <button class='btn-edit-missione'>Modifica</button>
             </div>
@@ -129,9 +199,7 @@ class GameUI {
         eventiBox.appendChild(div);
         // Aggiorna subito la missione per mostrare correttamente il menù ospedali/codice se necessario
         this.updateMissioneInCorso(call);
-    }
-
-    // Aggiorna la visualizzazione di una missione già presente in Eventi in corso
+    }    // Aggiorna la visualizzazione di una missione già presente in Eventi in corso
     updateMissioneInCorso(call) {
         // Forza sempre call.indirizzo valorizzato
         if (!call.indirizzo && call.location) call.indirizzo = call.location;
@@ -149,6 +217,52 @@ class GameUI {
         let indirizzoSintetico = via;
         if(comune) indirizzoSintetico += ' - ' + comune;
         indirizzoSintetico = indirizzoSintetico.trim() || indirizzo;
+        
+        // Imposta lo stile in base alla presenza o meno di mezzi
+        let missioneStyle = '';
+        let missioneStatusIcon = '';
+        let missioneStatusText = '';
+        
+        // Verifica se ci sono mezzi assegnati
+        const hasMezziAssegnati = call.mezziAssegnati && call.mezziAssegnati.length > 0;
+        
+        if (!hasMezziAssegnati) {
+            // Stile per missioni senza mezzi assegnati: bordo tratteggiato grigio
+            missioneStyle = 'border: 2px dashed #999; border-radius: 5px;';
+            missioneStatusText = '<span style="color:#999;font-size:12px;margin-left:10px;">■ Nessun mezzo assegnato</span>';
+        } else if (this.game && this.game.mezzi) {
+            const mezzi = this.game.mezzi.filter(m => (call.mezziAssegnati||[]).includes(m.nome_radio));
+            
+            // Verifica se c'è almeno un mezzo con report pronto
+            const hasReportPronto = mezzi.some(m => (m.comunicazioni||[]).some(c => c.toLowerCase().includes('report pronto')));
+            
+            // Verifica se c'è almeno un mezzo in trasporto verso ospedale
+            const hasOspedaleTransfer = mezzi.some(m => m.stato === 4);
+            
+            // Verifica se c'è almeno un mezzo in ospedale
+            const hasOspedale = mezzi.some(m => m.stato === 5 || m.stato === 6);
+            
+            if (hasOspedale) {
+                missioneStyle = 'border: 2px solid #ffca28; border-radius: 5px; background-color: #fff8e1;';
+                missioneStatusIcon = '<span style="font-size:16px;margin-left:10px;">🏥</span>';
+                missioneStatusText = '<span style="color:#e65100;font-size:12px;margin-left:5px;">■ Mezzo in ospedale</span>';
+            } else if (hasOspedaleTransfer) {
+                missioneStyle = 'border: 2px solid #66bb6a; border-radius: 5px; background-color: #e8f5e9;';
+                missioneStatusIcon = '<span style="font-size:16px;margin-left:10px;">🚑</span>';
+                missioneStatusText = '<span style="color:#1b5e20;font-size:12px;margin-left:5px;">■ In trasporto verso ospedale</span>';
+            } else if (hasReportPronto) {
+                missioneStyle = 'border: 2px solid #42a5f5; border-radius: 5px; background-color: #e3f2fd;';
+                missioneStatusIcon = '<span style="font-size:16px;margin-left:10px;">📋</span>';
+                missioneStatusText = '<span style="color:#0d47a1;font-size:12px;margin-left:5px;">■ Report pronto</span>';
+            } else {
+                // Missione con mezzi in stato normale
+                missioneStyle = 'border: 2px solid #5c6bc0; border-radius: 5px;';
+                missioneStatusText = '<span style="color:#3949ab;font-size:12px;margin-left:10px;">■ Mezzi assegnati</span>';
+            }
+        }
+        
+        // Aggiorna lo stile del div principale
+        div.setAttribute('style', missioneStyle);
 
         // Ospedale e codice trasporto SOLO se confermati
         let ospedaleHtml = '';
@@ -166,6 +280,7 @@ class GameUI {
             <span style="display:flex;align-items:center;gap:8px;">
                 <span class="missione-codice-box" style="display:inline-block;width:18px;height:18px;border-radius:4px;margin-right:8px;vertical-align:middle;background:${getColoreCodice(call.codice)};"></span>
                 ${call.missioneId} - ${indirizzoSintetico}${ospedaleHtml}
+                ${missioneStatusIcon}${missioneStatusText}
             </span>
             <button class='btn-edit-missione'>Modifica</button>
         `;
@@ -225,14 +340,51 @@ class GameUI {
                 if (isMSBStato3 && altriAvanzatiPresenti) {
                     mostraReport = false;
                 }
-                if ((m.comunicazioni||[]).some(c => c.toLowerCase().includes('report pronto')) && call.selectedChiamata && call.selectedCase && mostraReport) {
+                
+                // Verifica se il mezzo ha inviato un report pronto
+                const hasReportPronto = (m.comunicazioni||[]).some(c => c.toLowerCase().includes('report pronto'));
+                
+                if (hasReportPronto && mostraReport) {
+                    // Determina il tipo di mezzo per la ricerca del report
                     let tipo = '';
                     if (m.tipo_mezzo && m.tipo_mezzo.startsWith('MSB')) tipo = 'MSB';
                     else if (m.tipo_mezzo && m.tipo_mezzo.startsWith('MSA1')) tipo = 'MSA1';
                     else if (m.tipo_mezzo && m.tipo_mezzo.startsWith('MSA2')) tipo = 'MSA2';
                     else if (m.tipo_mezzo && m.tipo_mezzo.toUpperCase().includes('ELI')) tipo = 'MSA2'; // ELI usa sempre MSA2
-                    if (tipo && call.selectedChiamata[call.selectedCase] && call.selectedChiamata[call.selectedCase][tipo]) {
-                        testoScheda = call.selectedChiamata[call.selectedCase][tipo];
+                    
+                    // Cerca il report nella struttura dati della chiamata
+                    if (tipo && call.selectedChiamata) {
+                        // Prima cerca nel caso selezionato
+                        if (call.selectedCase && call.selectedChiamata[call.selectedCase] && 
+                            call.selectedChiamata[call.selectedCase][tipo]) {
+                            testoScheda = call.selectedChiamata[call.selectedCase][tipo];
+                        } 
+                        // Se non trova il report nel caso selezionato, usa caso_stabile come fallback
+                        else if (call.selectedChiamata['caso_stabile'] && call.selectedChiamata['caso_stabile'][tipo]) {
+                            testoScheda = call.selectedChiamata['caso_stabile'][tipo];
+                        } 
+                        // Solo se non trova niente in caso_stabile usa un messaggio generico
+                        else {
+                            // Report fallback se non troviamo un report specifico
+                            const codiceColore = call.codice || 'Verde';
+                            if (tipo === 'MSB') {
+                                testoScheda = `Paziente soccorso, parametri vitali stabili. Codice ${codiceColore}. Nessun report dettagliato disponibile.`;
+                            } else if (tipo === 'MSA1' || tipo === 'MSA2' || tipo.includes('ELI')) {
+                                testoScheda = `Paziente soccorso, valutazione clinica completata. Parametri vitali monitorati. Codice ${codiceColore}. Nessun report dettagliato disponibile.`;
+                            } else {
+                                testoScheda = `Intervento completato. Codice ${codiceColore}. Nessun report dettagliato disponibile.`;
+                            }
+                        }
+                    } else {
+                        // Report fallback se non troviamo un report specifico
+                        const codiceColore = call.codice || 'Verde';
+                        if (tipo === 'MSB') {
+                            testoScheda = `Paziente soccorso, parametri vitali stabili. Codice ${codiceColore}. Nessun report dettagliato disponibile.`;
+                        } else if (tipo === 'MSA1' || tipo === 'MSA2' || tipo.includes('ELI')) {
+                            testoScheda = `Paziente soccorso, valutazione clinica completata. Parametri vitali monitorati. Codice ${codiceColore}. Nessun report dettagliato disponibile.`;
+                        } else {
+                            testoScheda = `Intervento completato. Codice ${codiceColore}. Nessun report dettagliato disponibile.`;
+                        }
                     }
                 }
                 // Highlight vehicles arrived at hospital (stato 6)
@@ -243,7 +395,6 @@ class GameUI {
                 }
 
                 // Aggiungi stato e comunicazioni del mezzo
-                const hasReportPronto = (m.comunicazioni||[]).some(c => c.toLowerCase().includes('report pronto'));
                 let comunicazioni = '';
                 if (Array.isArray(m.comunicazioni) && m.comunicazioni.length > 0) {
                     comunicazioni = m.comunicazioni[m.comunicazioni.length - 1];
@@ -393,5 +544,118 @@ class GameUI {
         if (this.game && this.game.calls) {
             this.game.calls.delete(call.id);
         }
+    }
+    
+    // Aggiorna la lista dei mezzi e i loro stati in tempo reale
+    updateStatoMezzi(mezzoCambiato = null) {
+        const div = document.getElementById('statoMezzi');
+        if (!div || !window.game || !window.game.mezzi) return;
+
+        // Ordina: prima i mezzi che hanno cambiato stato o ricevuto comunicazioni più di recente (escluso stato 8), poi tutti gli altri, poi quelli in stato 8 in fondo
+        // Exclude SRL/SRP vehicles in state 1 or 8
+        let mezzi = window.game.mezzi.filter(m => {
+            if ((m.isSRL || m.isSRP) && (m.stato === 1 || m.stato === 8)) return false;
+            return true;
+        });
+         
+         // Mezzi in stato 8 separati
+        const mezziStato8 = mezzi.filter(m => m.stato === 8);
+        let altriMezzi = mezzi.filter(m => m.stato !== 8);
+         
+         // Calcola il timestamp più recente tra _lastEvent e ultimo messaggio
+         altriMezzi.forEach(m => {
+             let lastMsg = 0;
+             if (Array.isArray(m.comunicazioni) && m.comunicazioni.length > 0) {
+                 // Consider only Report pronto messages for timestamp
+                 const reportMsg = m.comunicazioni.find(c => c.includes('Report pronto'));
+                 if (reportMsg) {
+                     lastMsg = m._lastMsgTime || 0;
+                 }
+             }
+             m._sortKey = Math.max(m._lastEvent || 0, lastMsg);
+         });
+         altriMezzi = altriMezzi.sort((a, b) => (b._sortKey || 0) - (a._sortKey || 0));
+         mezziStato8.sort((a, b) => (a.nome_radio || '').localeCompare(b.nome_radio || '')); 
+
+         // Layout a 3 colonne
+         div.innerHTML = '';
+         div.style.maxHeight = '350px';
+         div.style.overflowY = 'auto';
+         div.style.display = 'flex';
+         div.style.flexDirection = 'column';
+
+         // HEADER: aggiungi la riga di intestazione
+         div.innerHTML += `
+             <div class="mezzo-header-row" style="display:flex;align-items:center;font-weight:bold;background:#e3e3e3;border-bottom:1px solid #bbb;padding:2px 4px;">
+                 <div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">Mezzo</div>
+                 <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">Tipo</div>
+                 <div style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">Convenzione</div>
+                 <div style="flex:1;text-align:left;min-width:70px;">Stato</div>
+                 <div style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">Comunicazioni</div>
+             </div>
+         `;
+
+         // Funzione robusta per etichetta stato
+         function getStatoLabel(stato) {
+             if (window.game && window.game.statiMezzi && window.game.statiMezzi[stato] && window.game.statiMezzi[stato].Descrizione) {
+                 return window.game.statiMezzi[stato].Descrizione;
+             }
+             return '';
+         }
+
+        // Mostra i mezzi filtrati: prima altri, poi stato8
+        [...altriMezzi, ...mezziStato8].forEach(m => {
+            const statoLabel = getStatoLabel(m.stato) || m.stato;
+            const comunicazione = Array.isArray(m.comunicazioni) && m.comunicazioni.length
+                ? m.comunicazioni[m.comunicazioni.length - 1]
+                : '';
+            // Create a row with name, type, convention, state, and communications
+            div.innerHTML += `
+            <div class="mezzo-row" data-mezzo-id="${m.nome_radio}" style="display:flex;align-items:center;border-bottom:1px solid #ddd;padding:4px 0;">
+                <div class="mezzo-cell" style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;">${m.nome_radio}</div>
+                <div class="tipo-cell" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${m.tipo_mezzo || ''}</div>
+                <div class="convenzione-cell" style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;">${m.convenzione || ''}</div>
+                <div class="stato-cell" style="flex:1;text-align:left;min-width:70px;">${statoLabel}</div>
+                <div class="comunicazione-cell" style="flex:2;min-width:0;overflow:hidden;text-overflow:ellipsis;color:#555;">${comunicazione}</div>
+            </div>
+            `;
+        });
+        // Attach click handlers to new rows
+        const rows = div.querySelectorAll('.mezzo-row');
+        rows.forEach(row => {
+            const mezzoId = row.getAttribute('data-mezzo-id');
+            // Click on mezzo name to center map
+            const cellMezzo = row.querySelector('.mezzo-cell');
+            if (cellMezzo) {
+                cellMezzo.addEventListener('click', e => {
+                    e.stopPropagation();
+                    const mezzo = window.game.mezzi.find(x => x.nome_radio === mezzoId);
+                    if (mezzo && mezzo._marker && window.game.map) {
+                        window.game.map.setView([mezzo.lat, mezzo.lon], 16, { animate: true });
+                        mezzo._marker.openPopup && mezzo._marker.openPopup();
+                    }
+                });
+            }
+            // Click on Report pronto to show mission report
+            const cellComm = row.querySelector('.comunicazione-cell');
+            if (cellComm) {
+                cellComm.addEventListener('click', e => {
+                    e.stopPropagation();
+                    if (cellComm.textContent.includes('Report pronto')) {
+                        const calls = Array.from(window.game.calls.values())
+                            .filter(call => (call.mezziAssegnati||[]).includes(mezzoId));
+                        calls.forEach(call => {
+                            window.game.ui.updateMissioneInCorso(call);
+                            const elem = document.getElementById(`evento-${call.missioneId}`);
+                            if (elem) {
+                                const det = elem.querySelector('.missione-details');
+                                if (det) det.style.display = 'block';
+                                elem.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                            }
+                        });
+                    }
+                });
+            }
+        });
     }
 }
