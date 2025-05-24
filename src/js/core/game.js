@@ -592,9 +592,15 @@ class EmergencyDispatchGame {
     }
 
     async loadMezzi() {
-        try {
-            const response = await fetch('src/data/mezzi_sra.json');
-            let mezzi = await response.json();
+        // Determine base path for fetching data relative to this script
+        const scriptTag = document.querySelector('script[src$="game.js"]');
+        const scriptSrc = scriptTag ? scriptTag.src : '';
+        const basePath = scriptSrc.includes('src/js/core/')
+            ? scriptSrc.substring(0, scriptSrc.indexOf('src/js/core/'))
+            : window.location.origin + window.location.pathname.replace(/index\.html$/, '');
+         try {
+             const response = await fetch('src/data/mezzi_sra.json');
+             let mezzi = await response.json();
 
             // Se il file JSON esporta un oggetto con una proprietà (es: { Sheet1: [...] }), estrai l'array
             if (!Array.isArray(mezzi)) {
@@ -680,11 +686,7 @@ class EmergencyDispatchGame {
 
             // Add SRL vehicles (prefix mezzi_srl)
             try {
-                let resSRLMezzi = await fetch('./src/data/mezzi_srl.json');
-                if (!resSRLMezzi.ok) {
-                    // fallback to alternate path
-                    resSRLMezzi = await fetch('./data/mezzi_srl.json');
-                }
+                const resSRLMezzi = await fetch(`${basePath}src/data/mezzi_srl.json`);
                 let srlMezzi = await resSRLMezzi.json();
                 if (!Array.isArray(srlMezzi)) {
                     const arr = Object.values(srlMezzi).find(v => Array.isArray(v));
@@ -715,11 +717,7 @@ class EmergencyDispatchGame {
 
             // Add SRP vehicles (prefix mezzi_srp)
             try {
-                let resSRPMezzi = await fetch('./src/data/mezzi_srp.json');
-                if (!resSRPMezzi.ok) {
-                    // fallback to alternate path
-                    resSRPMezzi = await fetch('./data/mezzi_srp.json');
-                }
+                const resSRPMezzi = await fetch(`${basePath}src/data/mezzi_srp.json`);
                 let srpMezzi = await resSRPMezzi.json();
                 if (!Array.isArray(srpMezzi)) {
                     const arr = Object.values(srpMezzi).find(v => Array.isArray(v));
